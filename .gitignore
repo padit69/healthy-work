@@ -126,4 +126,3 @@ certificate-base64.txt
 
 # GitHub Actions cache
 .github/workflows-cache/
-/HealthyWork/
