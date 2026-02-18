@@ -1,0 +1,50 @@
+---
+description: SwiftUI screen structure - ViewModel + View + Components folder per screen
+globs: HealthyWork/Features/**/*.swift
+alwaysApply: false
+---
+
+# SwiftUI Screen Structure (macOS)
+
+Mỗi screen / view screen trong app **bắt buộc** theo cấu trúc sau.
+
+## Cấu trúc folder cho mỗi screen
+
+```
+Features/
+  <FeatureName>/
+    <FeatureName>View.swift       # View (SwiftUI)
+    <FeatureName>ViewModel.swift  # ViewModel (ObservableObject / @Observable)
+    Components/                   # (optional) Chỉ khi screen có component riêng
+      SomeCellView.swift
+      SomeCardView.swift
+```
+
+## Quy tắc
+
+1. **View + ViewModel luôn có**
+   - Mỗi screen có đúng 1 file View và 1 file ViewModel.
+   - View chỉ render UI và gọi ViewModel (không chứa business logic).
+   - ViewModel chứa state, logic, và (nếu cần) gọi Services.
+
+2. **Components folder**
+   - Tạo folder `Components/` **bên trong** folder của screen đó khi screen có component chỉ dùng cho screen đó.
+   - Component dùng chung nhiều screen → đặt ở `HealthyWork/Components/` (root).
+
+3. **Đặt tên file**
+   - View: `<FeatureName>View.swift` (ví dụ: `MainView.swift`, `SettingsView.swift`).
+   - ViewModel: `<FeatureName>ViewModel.swift` (ví dụ: `MainViewModel.swift`, `SettingsViewModel.swift`).
+
+## Ví dụ
+
+**Features/Main/**
+- `MainView.swift` — body gọi `viewModel`, bind state từ ViewModel.
+- `MainViewModel.swift` — `@Observable` hoặc `ObservableObject`, chứa `@Query`/logic nếu cần.
+- `Components/` (nếu có) — ví dụ `ItemRowView.swift` chỉ dùng trong Main.
+
+**Features/Settings/**
+- `SettingsView.swift`
+- `SettingsViewModel.swift`
+- `Components/` (nếu có)
+
+Khi tạo screen mới hoặc refactor: luôn thêm ViewModel, và thêm folder `Components/` nếu screen có component riêng.

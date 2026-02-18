@@ -1,0 +1,30 @@
+---
+description: Convention cho Core (Extensions, Constants, Utilities)
+globs: HealthyWork/Core/**/*.swift
+alwaysApply: false
+---
+
+# Core Layer
+
+Code dùng chung toàn app, không thuộc feature cụ thể.
+
+## Cấu trúc `Core/`
+
+```
+Core/
+  Extensions/     # View+Extensions.swift, Color+Theme.swift, Date+Format.swift, ...
+  Constants/      # AppConstants.swift, APIConstants.swift, ...
+  Utilities/      # Logger.swift, helpers, ...
+```
+
+## Quy tắc
+
+- **Extensions**: đặt tên `<Type>+<Mục đích>.swift` (vd. `View+Extensions`, `String+Validation`). Mỗi file extend một type chính.
+- **Constants**: enum hoặc struct static, không lưu state. Ví dụ `AppConstants.App.name`, `AppConstants.Layout.*`.
+- **Utilities**: enum/struct chứa helper static (vd. `Logger.general.info(...)`). Tránh class khi không cần.
+
+## Không đặt trong Core
+
+- Logic nghiệp vụ → `Services/`.
+- Model data → `Models/`.
+- UI component → `Components/` hoặc `Features/.../Components/`.

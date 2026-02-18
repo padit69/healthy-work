@@ -1,0 +1,25 @@
+---
+description: Tổng quan cấu trúc thư mục HealthyWork (SwiftUI macOS)
+alwaysApply: true
+---
+
+# Cấu trúc project HealthyWork (SwiftUI macOS)
+
+## Thư mục gốc `HealthyWork/`
+
+| Thư mục / File | Mục đích |
+|----------------|----------|
+| `HealthyWorkApp.swift` | Entry point `@main`, setup ModelContainer, WindowGroup. Không chứa UI. |
+| `ContentView.swift` | Root view: chỉ compose view chính (vd. MainView). Không chứa logic. |
+| `Core/` | Extensions, Constants, Utilities dùng chung toàn app. |
+| `Models/` | Data models: SwiftData `@Model`, DTOs, enums liên quan data. |
+| `Features/` | Từng màn hình/feature: mỗi folder = 1 feature (View + ViewModel + Components nếu có). |
+| `Services/` | Business logic, persistence, API: các service dùng chung. |
+| `Components/` | UI components **dùng chung** nhiều feature. Component chỉ 1 feature → đặt trong `Features/<Name>/Components/`. |
+| `Assets.xcassets/` | Images, colors, app icon. |
+
+## Nguyên tắc
+
+- **Một nơi cho mỗi thứ**: đúng folder, không tạo file lẫn lộn (vd. không đặt model trong Features).
+- **Feature mới** → folder mới trong `Features/<FeatureName>/` với View + ViewModel (+ Components nếu cần).
+- Project dùng **File System Synchronized Root Group**: thêm file/folder trong `HealthyWork/` là Xcode tự nhận, không cần add thủ công.

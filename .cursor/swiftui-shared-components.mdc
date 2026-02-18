@@ -1,0 +1,27 @@
+---
+description: Convention cho Components dùng chung (root Components/)
+globs: HealthyWork/Components/**/*.swift
+alwaysApply: false
+---
+
+# Shared Components (Root)
+
+Components trong `HealthyWork/Components/` là UI **dùng chung** nhiều feature.
+
+## Quy tắc
+
+- **Một component một file**. Đặt tên mô tả: `PrimaryButton.swift`, `CardView.swift`, `EmptyStateView.swift`.
+- Struct conform `View`, nhận data/action qua init hoặc `@Binding`. Tránh `@Environment(\.modelContext)` trừ khi thật sự cần.
+- Có `#Preview` để xem nhanh trong Xcode.
+- Nếu component **chỉ dùng trong một feature** → đặt trong `Features/<FeatureName>/Components/`, không đặt ở root `Components/`.
+
+## Ví dụ
+
+```
+Components/
+  PrimaryButton.swift    # Button style dùng nhiều nơi
+  CardView.swift
+  LoadingView.swift
+```
+
+Không đặt: form logic, ViewModel, Service trong folder Components. Chỉ UI tái sử dụng.
