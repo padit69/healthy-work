@@ -82,8 +82,6 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     case eyeRest = "Eye Rest"
     case movement = "Movement"
     case appearance = "Appearance"
-    case permissions = "Permissions"
-    case test = "Test Reminders"
     case about = "About"
 
     var id: String { rawValue }
@@ -96,8 +94,6 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .eyeRest: return "eye"
         case .movement: return "figure.walk"
         case .appearance: return "paintbrush"
-        case .permissions: return "hand.raised"
-        case .test: return "play.circle"
         case .about: return "info.circle"
         }
     }
@@ -112,11 +108,7 @@ struct SettingsView: View {
     @State private var selectedSection: SettingsSection = .general
 
     private var sidebarSections: [SettingsSection] {
-        var list = SettingsSection.allCases
-        if reminderCoordinator == nil {
-            list.removeAll { $0 == .test }
-        }
-        return list
+        SettingsSection.allCases
     }
 
     var body: some View {
@@ -155,10 +147,6 @@ struct SettingsView: View {
             movementContent
         case .appearance:
             appearanceContent
-        case .permissions:
-            permissionsContent
-        case .test:
-            testRemindersContent
         case .about:
             aboutContent
         }
@@ -166,30 +154,54 @@ struct SettingsView: View {
 
     private var generalContent: some View {
         Group {
+            // Dashboard-style overview for today
             Section {
-                LabeledContent("Water today") {
-                    Text("\(WaterService.totalMl(for: Date(), in: modelContext)) ml")
-                        .foregroundStyle(.secondary)
+                let waterMl = WaterService.totalMl(for: Date(), in: modelContext)
+                let waterGlasses = StatsService.waterCountToday(context: modelContext)
+                let eyeCount = StatsService.eyeRestCompletedToday(context: modelContext)
+                let moveCount = StatsService.movementCompletedToday(context: modelContext)
+                let streakDays = StatsService.currentStreak(context: modelContext)
+
+                HStack(spacing: 12) {
+                    DashboardMetricCard(
+                        title: "Water today",
+                        value: "\(waterMl) ml",
+                        subtitle: waterGlasses > 0 ? "\(waterGlasses) glasses" : "No logs yet",
+                        systemImage: "drop.fill",
+                        tint: .blue
+                    )
+                    DashboardMetricCard(
+                        title: "Eye rest",
+                        value: "\(eyeCount)",
+                        subtitle: eyeCount > 0 ? "Completed breaks" : "Not yet",
+                        systemImage: "eye.fill",
+                        tint: .cyan
+                    )
+                    DashboardMetricCard(
+                        title: "Movement",
+                        value: "\(moveCount)",
+                        subtitle: moveCount > 0 ? "Times moved" : "Not yet",
+                        systemImage: "figure.stand",
+                        tint: .green
+                    )
+                    DashboardMetricCard(
+                        title: "Streak",
+                        value: "\(streakDays)d",
+                        subtitle: streakDays > 0 ? "Active days" : "Start today",
+                        systemImage: "flame.fill",
+                        tint: .orange
+                    )
                 }
-                LabeledContent("Eye rest") {
-                    Text("\(StatsService.eyeRestCompletedToday(context: modelContext))")
-                        .foregroundStyle(.secondary)
-                }
-                LabeledContent("Movement") {
-                    Text("\(StatsService.movementCompletedToday(context: modelContext))")
-                        .foregroundStyle(.secondary)
-                }
-                LabeledContent("Streak") {
-                    Text("\(StatsService.currentStreak(context: modelContext)) days")
-                        .foregroundStyle(.secondary)
-                }
+                .padding(.vertical, 4)
             } header: {
-                Text("Today")
+                Text("Today Dashboard")
                     .settingsSectionHeader()
             } footer: {
-                Text("Quick overview of your day so far.")
+                Text("Animated overview of your current day and streak.")
                     .settingsSectionFooter()
             }
+
+            // Work hours stay here but visually separated from dashboard
             Section {
                 DatePicker("Work start", selection: $viewModel.preferences.workStartTime, displayedComponents: .hourAndMinute)
                 DatePicker("Work end", selection: $viewModel.preferences.workEndTime, displayedComponents: .hourAndMinute)
@@ -306,11 +318,17 @@ struct SettingsView: View {
                     Text("Snooze")
                         .font(.system(size: 13))
                 }
+                Button(action: { viewModel.requestNotificationPermission() }) {
+                    Label("Request notification permission", systemImage: "bell.badge")
+                        .font(.system(size: 13))
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
             } header: {
                 Text("Notifications")
                     .settingsSectionHeader()
             } footer: {
-                Text("Play sound and show notifications when reminders appear.")
+                Text("Control how macOS notifications behave for reminders and request permission if needed.")
                     .settingsSectionFooter()
             }
         }
@@ -449,60 +467,66 @@ struct SettingsView: View {
 
     private var appearanceContent: some View {
         Group {
+            // Reminder appearance (style, preview, future reminder-specific options)
             Section {
-                VStack(spacing: 16) {
+                HStack(alignment: .top, spacing: 12) {
                     ForEach(ReminderDisplayStyle.allCases) { style in
                         StyleOptionCard(
                             style: style,
                             isSelected: viewModel.preferences.reminderDisplayStyle == style,
                             onSelect: { viewModel.preferences.reminderDisplayStyle = style }
                         )
+                        .frame(maxWidth: .infinity)
                     }
                 }
                 .padding(.vertical, 8)
             } header: {
-                Text("Reminder Display Style")
+                Text("Reminder Appearance")
                     .settingsSectionHeader()
             } footer: {
-                Text("Choose how full-screen reminder screens will appear.")
+                Text("Configure how full-screen reminder screens look. More reminder-specific options can be added here later.")
                     .settingsSectionFooter()
             }
             if let coordinator = reminderCoordinator {
                 Section {
-                    LabeledContent {
-                        Menu {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Preview how each reminder type will look with the selected style.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        HStack(spacing: 12) {
                             Button(action: { coordinator.show(.water) }) {
-                                Label("Water Reminder", systemImage: "drop.fill")
+                                Label("Water", systemImage: "drop.fill")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .frame(maxWidth: .infinity)
                             }
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
                             Button(action: { coordinator.show(.eyeRest) }) {
-                                Label("Eye Rest Reminder", systemImage: "eye.fill")
+                                Label("Eye Rest", systemImage: "eye.fill")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .frame(maxWidth: .infinity)
                             }
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
                             Button(action: { coordinator.show(.movement) }) {
-                                Label("Movement Reminder", systemImage: "figure.stand")
+                                Label("Movement", systemImage: "figure.stand")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .frame(maxWidth: .infinity)
                             }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Text("Preview")
-                                    .font(.system(size: 12))
-                                Image(systemName: "chevron.down.circle.fill")
-                                    .font(.system(size: 12))
-                                    .symbolRenderingMode(.hierarchical)
-                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
                         }
-                        .buttonStyle(.borderless)
-                        .controlSize(.small)
-                    } label: {
-                        Label("Test Display Style", systemImage: "play.circle")
-                            .font(.system(size: 13))
                     }
+                    .padding(.vertical, 4)
                 } header: {
-                    Text("Preview")
+                    Text("Reminder Preview")
                         .settingsSectionHeader()
                 } footer: {
-                    Text("Preview how reminders will look with your selected style.")
-                        .settingsSectionFooter()
+                    EmptyView()
                 }
             }
+
+            // App / system appearance (theme, language, minimal mode)
             Section {
                 LabeledContent("Theme") {
                     Picker("", selection: $viewModel.preferences.appearance) {
@@ -529,62 +553,50 @@ struct SettingsView: View {
                         .font(.system(size: 13))
                 }
             } header: {
-                Text("Appearance")
+                Text("App & System Appearance")
                     .settingsSectionHeader()
             } footer: {
-                Text("Minimal mode reduces visual noise and notification frequency.")
+                Text("Control overall app theme, language and minimal mode (system-wide appearance).")
                     .settingsSectionFooter()
             }
         }
     }
 
-    private var permissionsContent: some View {
-        Section {
-            Button(action: { viewModel.requestNotificationPermission() }) {
-                Label("Request notification permission", systemImage: "bell.badge")
-                    .font(.system(size: 13))
-            }
-        } header: {
-            Text("Permissions")
-                .settingsSectionHeader()
-        }
-    }
+// MARK: - Dashboard metric card
 
-    private var testRemindersContent: some View {
-        Section {
-            if let coordinator = reminderCoordinator {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Use these buttons to preview how reminders will look without waiting for the next schedule.")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                    HStack(spacing: 10) {
-                        Button(action: { coordinator.show(.water) }) {
-                            Label("Water", systemImage: "drop.fill")
-                                .font(.system(size: 13))
-                        }
-                        .buttonStyle(.bordered)
-                        Button(action: { coordinator.show(.eyeRest) }) {
-                            Label("Eye rest", systemImage: "eye.fill")
-                                .font(.system(size: 13))
-                        }
-                        .buttonStyle(.bordered)
-                        Button(action: { coordinator.show(.movement) }) {
-                            Label("Movement", systemImage: "figure.stand")
-                                .font(.system(size: 13))
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                }
-                .padding(.vertical, 4)
+private struct DashboardMetricCard: View {
+    let title: String
+    let value: String
+    let subtitle: String
+    let systemImage: String
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(tint)
+                Text(title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.secondary)
             }
-        } header: {
-            Text("Test Reminders")
-                .settingsSectionHeader()
-        } footer: {
-            Text("Preview each reminder type in a full-screen overlay.")
-                .settingsSectionFooter()
+            Text(value)
+                .font(.system(size: 22, weight: .bold))
+                .foregroundColor(.primary)
+            Text(subtitle)
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
         }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(NSColor.controlBackgroundColor))
+                .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+        )
     }
+}
 
     private var aboutContent: some View {
         Group {
