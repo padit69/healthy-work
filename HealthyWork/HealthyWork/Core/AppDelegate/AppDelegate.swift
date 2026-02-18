@@ -73,6 +73,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     func showFullScreenReminder(_ type: ReminderType) {
         closeFullScreenReminderWindow()
+        // Ẩn cửa sổ Settings (nếu đang mở) để sau khi tắt reminder
+        // không tự động hiện lại Settings. Settings chỉ mở từ menu bar.
+        mainWindow?.orderOut(nil)
         let container = modelContainer ?? AppDelegate.sharedModelContainer
         let coordinator = reminderCoordinator ?? AppDelegate.sharedCoordinator
         guard let container = container else { return }
@@ -353,6 +356,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                 let coordinator = reminderCoordinator ?? AppDelegate.sharedCoordinator
                 if fullScreenReminderWindow == nil, let coordinator = coordinator {
                     DispatchQueue.main.async { [weak self] in
+                        guard self != nil else { return }
                         coordinator.show(type)
                     }
                 }
@@ -406,7 +410,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         // Bring app to foreground and show dock icon when opening Settings from menu bar.
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        mainWindow?.makeKeyAndOrderFront(nil)
+
+        // Ưu tiên dùng mainWindow do WindowAccessor gán,
+        // nếu nil thì fallback sang bất kỳ window hiện có của app.
+        if let window = mainWindow ?? NSApp.windows.first {
+            mainWindow = window
+            window.makeKeyAndOrderFront(nil)
+            window.orderFrontRegardless()
+        }
     }
 
     @objc private func quit() {
