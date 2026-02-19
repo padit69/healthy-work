@@ -26,7 +26,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     var reminderCoordinator: ReminderCoordinator? {
         didSet {
             reminderCoordinator?.onShowReminder = { [weak self] type in
-                self?.showFullScreenReminder(type)
+                Task { @MainActor in
+                    self?.showFullScreenReminder(type)
+                }
             }
         }
     }
