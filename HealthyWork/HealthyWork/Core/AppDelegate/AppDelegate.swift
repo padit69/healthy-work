@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private var statusMenu: NSMenu?
     private var nextRemindersHeaderItem: NSMenuItem?
     private var openSettingsMenuItem: NSMenuItem?
+    private var checkForUpdatesMenuItem: NSMenuItem?
     private var quitMenuItem: NSMenuItem?
     private var countdownTimer: Timer?
     private var waterCountdownItem: NSMenuItem?
@@ -42,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     private var fullScreenReminderWindow: NSWindow?
     private var escapeKeyMonitor: Any?
+    private var updateAvailableWindow: NSWindow?
 
     /// Countdown seconds per reminder type (drives auto full-screen reminders).
     private var secondsRemainingPerType: [ReminderType: Int] = [:]
@@ -315,6 +317,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         menu.addItem(openItem)
         openSettingsMenuItem = openItem
 
+        let checkUpdateItem = NSMenuItem(title: "Check for Updates".localizedByKey, action: #selector(checkForUpdates), keyEquivalent: "")
+        checkUpdateItem.target = self
+        menu.addItem(checkUpdateItem)
+        checkForUpdatesMenuItem = checkUpdateItem
+
         let quitItem = NSMenuItem(title: "Quit".localizedByKey, action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         if let quitImage = NSImage(systemSymbolName: "rectangle.portrait.and.arrow.right", accessibilityDescription: "Quit") {
@@ -422,6 +429,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         // Keep menu bar labels in sync with current language
         nextRemindersHeaderItem?.title = "Next reminders".localizedByKey
         openSettingsMenuItem?.title = "Open Settings".localizedByKey
+        checkForUpdatesMenuItem?.title = "Check for Updates".localizedByKey
         quitMenuItem?.title = "Quit".localizedByKey
 
         let waterLabel = "Water".localizedByKey
@@ -463,5 +471,49 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     @objc private func quit() {
         NSApp.terminate(nil)
+    }
+
+    @objc private func checkForUpdates() {
+        Task { @MainActor in
+            guard let release = await UpdateCheckService.checkForUpdate() else {
+                let alert = NSAlert()
+                alert.messageText = "You're up to date".localizedByKey
+                alert.informativeText = "You have the latest version (\(UpdateCheckService.currentVersion))."
+                alert.alertStyle = .informational
+                alert.addButton(withTitle: "OK".localizedByKey)
+                NSApp.setActivationPolicy(.regular)
+                NSApp.activate(ignoringOtherApps: true)
+                alert.runModal()
+                return
+            }
+            showUpdateAvailableWindow(release: release)
+        }
+    }
+
+    @MainActor
+    private func showUpdateAvailableWindow(release: GitHubRelease) {
+        updateAvailableWindow?.orderOut(nil)
+        updateAvailableWindow = nil
+
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+
+        let content = UpdateAvailableView(release: release) { [weak self] in
+            self?.updateAvailableWindow?.orderOut(nil)
+            self?.updateAvailableWindow = nil
+        }
+        let hosting = NSHostingView(rootView: content)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 440, height: 280),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "\(AppConstants.App.name) — Update"
+        window.contentView = hosting
+        window.center()
+        window.isReleasedWhenClosed = false
+        window.makeKeyAndOrderFront(nil)
+        updateAvailableWindow = window
     }
 }
