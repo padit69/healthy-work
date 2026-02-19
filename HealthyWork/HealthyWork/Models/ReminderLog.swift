@@ -72,4 +72,10 @@ enum ReminderType: String, Codable, CaseIterable, Identifiable {
         case .movement: return "Improve your circulation".localizedByKey
         }
     }
+
+    /// Resolved primary/accent color: custom hex from preferences or type default.
+    func primaryColor(overrideHex: String?) -> Color {
+        if let hex = overrideHex, let custom = Color(hex: hex) { return custom }
+        return color
+    }
 }

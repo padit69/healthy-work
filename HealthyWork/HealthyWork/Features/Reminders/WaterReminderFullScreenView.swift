@@ -13,17 +13,20 @@ struct WaterReminderFullScreenView: View {
 
     private var preferences: UserPreferences { PreferencesService.load() }
     private var displayStyle: ReminderDisplayStyle { preferences.reminderDisplayStyle }
+    private var primaryColor: Color { ReminderType.water.primaryColor(overrideHex: preferences.reminderPrimaryColorHex(for: .water)) }
 
     var body: some View {
         ReminderStyleView(
             displayStyle: displayStyle,
             type: .water,
+            primaryColor: primaryColor,
             countdown: nil,
             progress: 0,
             primaryButton: ("str_button_i_drank".localizedByKey, handleDrank),
             secondaryButton: ("str_button_skip".localizedByKey, handleSkip)
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Shortcuts: Return = primary (I drank), Space = secondary (Skip)
         .onKeyPress(.return) {
             handleDrank()
             return .handled

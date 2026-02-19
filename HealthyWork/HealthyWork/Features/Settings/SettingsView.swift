@@ -28,6 +28,23 @@ extension View {
     fileprivate func settingsSectionFooter() -> some View { modifier(SettingsSectionFooter()) }
 }
 
+// MARK: - Reminder primary color palette (hex stored in preferences)
+private struct ReminderPrimaryColorOption: Identifiable {
+    let label: String
+    let hex: String?
+    var id: String { hex ?? "default" }
+    static let all: [ReminderPrimaryColorOption] = [
+        ReminderPrimaryColorOption(label: "Default", hex: nil),
+        ReminderPrimaryColorOption(label: "Blue", hex: "#007AFF"),
+        ReminderPrimaryColorOption(label: "Cyan", hex: "#32ADE6"),
+        ReminderPrimaryColorOption(label: "Green", hex: "#34C759"),
+        ReminderPrimaryColorOption(label: "Teal", hex: "#5AC8FA"),
+        ReminderPrimaryColorOption(label: "Orange", hex: "#FF9500"),
+        ReminderPrimaryColorOption(label: "Purple", hex: "#AF52DE"),
+        ReminderPrimaryColorOption(label: "Pink", hex: "#FF2D55")
+    ]
+}
+
 // MARK: - Style option card for Reminder display style
 private struct StyleOptionCard: View {
     let style: ReminderDisplayStyle
@@ -279,10 +296,10 @@ struct SettingsView: View {
                     )
                 }
             } header: {
-                Text("Reminders")
+                Text("Schedule")
                     .settingsSectionHeader()
             } footer: {
-                Text("Enable reminders and set how often they appear.")
+                Text("Enable each reminder and set how often it appears.")
                     .settingsSectionFooter()
             }
             Section {
@@ -331,6 +348,64 @@ struct SettingsView: View {
                 Text("Control how macOS notifications behave for reminders and request permission if needed.")
                     .settingsSectionFooter()
             }
+
+            // Reminder style (Modern / Minimal / Bold)
+            Section {
+                HStack(alignment: .top, spacing: 12) {
+                    ForEach(ReminderDisplayStyle.allCases) { style in
+                        StyleOptionCard(
+                            style: style,
+                            isSelected: viewModel.preferences.reminderDisplayStyle == style,
+                            onSelect: { viewModel.preferences.reminderDisplayStyle = style }
+                        )
+                    }
+                }
+                .padding(.vertical, 8)
+            } header: {
+                Text("Reminder style")
+                    .settingsSectionHeader()
+            } footer: {
+                Text("Visual style of full-screen reminders (layout and mood). Background and color per type are in Water / Eye Rest / Movement.")
+                    .settingsSectionFooter()
+            }
+
+            // Preview
+            if let coordinator = reminderCoordinator {
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Preview the full-screen reminder with current settings.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        HStack(spacing: 12) {
+                            Button(action: { coordinator.show(.water) }) {
+                                Label("Water", systemImage: "drop.fill")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
+                            Button(action: { coordinator.show(.eyeRest) }) {
+                                Label("Eye Rest", systemImage: "eye.fill")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
+                            Button(action: { coordinator.show(.movement) }) {
+                                Label("Movement", systemImage: "figure.stand")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } header: {
+                    Text("Preview")
+                        .settingsSectionHeader()
+                }
+            }
         }
     }
 
@@ -365,169 +440,162 @@ struct SettingsView: View {
     }
 
     private var waterContent: some View {
-        Section {
-            LabeledContent("Weight (kg)") {
-                TextField("60", value: $viewModel.preferences.weightKg, format: .number)
-                    .frame(width: 72)
-                    .multilineTextAlignment(.trailing)
-            }
-            LabeledContent("Gender") {
-                Picker("", selection: $viewModel.preferences.gender) {
-                    Text("None".localizedByKey).tag(nil as UserPreferences.Gender?)
-                    ForEach(UserPreferences.Gender.allCases, id: \.self) { g in
-                        Text(g.localizedName).tag(g as UserPreferences.Gender?)
+        Group {
+            Section {
+                LabeledContent("Weight (kg)") {
+                    TextField("60", value: $viewModel.preferences.weightKg, format: .number)
+                        .frame(width: 72)
+                        .multilineTextAlignment(.trailing)
+                }
+                LabeledContent("Gender") {
+                    Picker("", selection: $viewModel.preferences.gender) {
+                        Text("None".localizedByKey).tag(nil as UserPreferences.Gender?)
+                        ForEach(UserPreferences.Gender.allCases, id: \.self) { g in
+                            Text(g.localizedName).tag(g as UserPreferences.Gender?)
+                        }
                     }
+                    .labelsHidden()
                 }
-                .labelsHidden()
-            }
-            LabeledContent("Unit") {
-                Picker("", selection: $viewModel.preferences.waterUnit) {
-                    ForEach(UserPreferences.WaterUnit.allCases, id: \.self) { unit in
-                        Text(unit.localizedName).tag(unit)
+                LabeledContent("Unit") {
+                    Picker("", selection: $viewModel.preferences.waterUnit) {
+                        ForEach(UserPreferences.WaterUnit.allCases, id: \.self) { unit in
+                            Text(unit.localizedName).tag(unit)
+                        }
                     }
+                    .labelsHidden()
                 }
-                .labelsHidden()
-            }
-            LabeledContent("Default glass") {
-                Picker("", selection: $viewModel.preferences.defaultGlassMl) {
-                    Text("200 ml").tag(200)
-                    Text("250 ml").tag(250)
+                LabeledContent("Default glass") {
+                    Picker("", selection: $viewModel.preferences.defaultGlassMl) {
+                        Text("200 ml").tag(200)
+                        Text("250 ml").tag(250)
+                    }
+                    .labelsHidden()
                 }
-                .labelsHidden()
+            } header: {
+                Text("Hydration")
+                    .settingsSectionHeader()
+            } footer: {
+                Text("Daily water goal is calculated from your weight unless you override it.")
+                    .settingsSectionFooter()
             }
-        } header: {
-            Text("Hydration")
-                .settingsSectionHeader()
-        } footer: {
-            Text("Daily water goal is calculated from your weight unless you override it.")
-                .settingsSectionFooter()
+            Section {
+                reminderAppearanceRows(
+                    backgroundBinding: Binding(
+                        get: { viewModel.preferences.reminderWaterBackgroundStyle ?? .blur },
+                        set: { viewModel.preferences.reminderWaterBackgroundStyle = $0 }
+                    ),
+                    primaryColorHexBinding: $viewModel.preferences.reminderWaterPrimaryColorHex
+                )
+            } header: {
+                Text("Full-screen reminder style")
+                    .settingsSectionHeader()
+            } footer: {
+                Text("Background and accent color when this reminder appears full-screen.")
+                    .settingsSectionFooter()
+            }
         }
     }
 
     private var eyeRestContent: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Label("Countdown", systemImage: "timer")
-                        .font(.system(size: 13))
-                    Spacer()
-                    HStack(spacing: 6) {
-                        Text("\(viewModel.preferences.eyeRestCountdownSeconds)")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.cyan)
-                            .monospacedDigit()
-                        Text("sec")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+        Group {
+            Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Label("Countdown", systemImage: "timer")
+                            .font(.system(size: 13))
+                        Spacer()
+                        HStack(spacing: 6) {
+                            Text("\(viewModel.preferences.eyeRestCountdownSeconds)")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.cyan)
+                                .monospacedDigit()
+                            Text("sec")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
                     }
+                    Slider(
+                        value: Binding(
+                            get: { Double(viewModel.preferences.eyeRestCountdownSeconds) },
+                            set: { viewModel.preferences.eyeRestCountdownSeconds = Int($0) }
+                        ),
+                        in: 10...60,
+                        step: 5
+                    )
+                    .tint(.cyan)
+                    .controlSize(.small)
                 }
-                Slider(
-                    value: Binding(
-                        get: { Double(viewModel.preferences.eyeRestCountdownSeconds) },
-                        set: { viewModel.preferences.eyeRestCountdownSeconds = Int($0) }
+                .padding(.vertical, 4)
+                LabeledContent {
+                    Toggle("", isOn: $viewModel.preferences.eyeRestSilentMode)
+                        .labelsHidden()
+                } label: {
+                    Label("Silent (no sound)", systemImage: "speaker.slash.fill")
+                        .font(.system(size: 13))
+                }
+            } header: {
+                Text("Eye Rest")
+                    .settingsSectionHeader()
+            } footer: {
+                Text("Look at something 20 feet away for 20 seconds to reduce eye strain.")
+                    .settingsSectionFooter()
+            }
+            Section {
+                reminderAppearanceRows(
+                    backgroundBinding: Binding(
+                        get: { viewModel.preferences.reminderEyeRestBackgroundStyle ?? .blur },
+                        set: { viewModel.preferences.reminderEyeRestBackgroundStyle = $0 }
                     ),
-                    in: 10...60,
-                    step: 5
+                    primaryColorHexBinding: $viewModel.preferences.reminderEyeRestPrimaryColorHex
                 )
-                .tint(.cyan)
-                .controlSize(.small)
+            } header: {
+                Text("Full-screen reminder style")
+                    .settingsSectionHeader()
+            } footer: {
+                Text("Background and accent color when this reminder appears full-screen.")
+                    .settingsSectionFooter()
             }
-            .padding(.vertical, 4)
-            LabeledContent {
-                Toggle("", isOn: $viewModel.preferences.eyeRestSilentMode)
-                    .labelsHidden()
-            } label: {
-                Label("Silent (no sound)", systemImage: "speaker.slash.fill")
-                    .font(.system(size: 13))
-            }
-        } header: {
-            Text("Eye Rest")
-                .settingsSectionHeader()
-        } footer: {
-            Text("Look at something 20 feet away for 20 seconds to reduce eye strain.")
-                .settingsSectionFooter()
         }
     }
 
     private var movementContent: some View {
-        Section {
-            LabeledContent {
-                Toggle("", isOn: $viewModel.preferences.movementRandomSuggestion)
-                    .labelsHidden()
-            } label: {
-                Label("Random suggestion", systemImage: "shuffle")
-                    .font(.system(size: 13))
+        Group {
+            Section {
+                LabeledContent {
+                    Toggle("", isOn: $viewModel.preferences.movementRandomSuggestion)
+                        .labelsHidden()
+                } label: {
+                    Label("Random suggestion", systemImage: "shuffle")
+                        .font(.system(size: 13))
+                }
+            } header: {
+                Text("Movement")
+                    .settingsSectionHeader()
+            } footer: {
+                Text("Show a random stretch or movement suggestion each time.")
+                    .settingsSectionFooter()
             }
-        } header: {
-            Text("Movement")
-                .settingsSectionHeader()
-        } footer: {
-            Text("Show a random stretch or movement suggestion each time.")
-                .settingsSectionFooter()
+            Section {
+                reminderAppearanceRows(
+                    backgroundBinding: Binding(
+                        get: { viewModel.preferences.reminderMovementBackgroundStyle ?? .blur },
+                        set: { viewModel.preferences.reminderMovementBackgroundStyle = $0 }
+                    ),
+                    primaryColorHexBinding: $viewModel.preferences.reminderMovementPrimaryColorHex
+                )
+            } header: {
+                Text("Full-screen reminder style")
+                    .settingsSectionHeader()
+            } footer: {
+                Text("Background and accent color when this reminder appears full-screen.")
+                    .settingsSectionFooter()
+            }
         }
     }
 
     private var appearanceContent: some View {
         Group {
-            // Reminder appearance (style, preview, future reminder-specific options)
-            Section {
-                HStack(alignment: .top, spacing: 12) {
-                    ForEach(ReminderDisplayStyle.allCases) { style in
-                        StyleOptionCard(
-                            style: style,
-                            isSelected: viewModel.preferences.reminderDisplayStyle == style,
-                            onSelect: { viewModel.preferences.reminderDisplayStyle = style }
-                        )
-                    }
-                }
-                .padding(.vertical, 8)
-            } header: {
-                Text("Reminder Appearance")
-                    .settingsSectionHeader()
-            } footer: {
-                Text("Configure how full-screen reminder screens look. More reminder-specific options can be added here later.")
-                    .settingsSectionFooter()
-            }
-            if let coordinator = reminderCoordinator {
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Preview how each reminder type will look with the selected style.")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                        HStack(spacing: 12) {
-                            Button(action: { coordinator.show(.water) }) {
-                                Label("Water", systemImage: "drop.fill")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.regular)
-                            Button(action: { coordinator.show(.eyeRest) }) {
-                                Label("Eye Rest", systemImage: "eye.fill")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.regular)
-                            Button(action: { coordinator.show(.movement) }) {
-                                Label("Movement", systemImage: "figure.stand")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-                            .controlSize(.regular)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                } header: {
-                    Text("Reminder Preview")
-                        .settingsSectionHeader()
-                } footer: {
-                    EmptyView()
-                }
-            }
-
-            // App / system appearance (theme, language, minimal mode)
+            // 1. App-wide: theme, language, minimal (đặt trước vì là cấu hình app)
             Section {
                 LabeledContent("Theme") {
                     Picker("", selection: $viewModel.preferences.appearance) {
@@ -552,12 +620,36 @@ struct SettingsView: View {
                         .font(.system(size: 13))
                 }
             } header: {
-                Text("App & System Appearance")
+                Text("App")
                     .settingsSectionHeader()
             } footer: {
-                Text("Control overall app theme, language and minimal mode (system-wide appearance).")
+                Text("Theme, language and minimal mode apply to the whole app.")
                     .settingsSectionFooter()
             }
+        }
+    }
+
+    /// Two rows: Background + Primary color (used inside each reminder type section).
+    @ViewBuilder
+    private func reminderAppearanceRows(
+        backgroundBinding: Binding<ReminderBackgroundStyle>,
+        primaryColorHexBinding: Binding<String?>
+    ) -> some View {
+        LabeledContent("Background") {
+            Picker("", selection: backgroundBinding) {
+                Text("Clear").tag(ReminderBackgroundStyle.clear)
+                Text("Blur").tag(ReminderBackgroundStyle.blur)
+                Text("Solid").tag(ReminderBackgroundStyle.solid)
+            }
+            .labelsHidden()
+        }
+        LabeledContent("Primary color") {
+            Picker("", selection: primaryColorHexBinding) {
+                ForEach(ReminderPrimaryColorOption.all) { option in
+                    Text(option.label).tag(option.hex as String?)
+                }
+            }
+            .labelsHidden()
         }
     }
 

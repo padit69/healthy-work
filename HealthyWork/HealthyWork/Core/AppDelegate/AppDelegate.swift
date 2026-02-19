@@ -249,7 +249,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             }
 
         case .eyeRest:
-            break
+            // Enter / Space: skip (log + dismiss); countdown stops when window closes
+            if enterKeyCodes.contains(keyCode) || keyCode == spaceKeyCode {
+                StatsService.logReminder(type: .eyeRest, completed: false, context: context)
+                DispatchQueue.main.async {
+                    coordinator.dismiss()
+                }
+                return true
+            }
         }
 
         return false

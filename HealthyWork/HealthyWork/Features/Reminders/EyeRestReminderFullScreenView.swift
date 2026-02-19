@@ -16,6 +16,7 @@ struct EyeRestReminderFullScreenView: View {
     private var preferences: UserPreferences { PreferencesService.load() }
     private var countdownSeconds: Int { preferences.eyeRestCountdownSeconds }
     private var displayStyle: ReminderDisplayStyle { preferences.reminderDisplayStyle }
+    private var primaryColor: Color { ReminderType.eyeRest.primaryColor(overrideHex: preferences.reminderPrimaryColorHex(for: .eyeRest)) }
     private var progress: Double {
         guard countdownSeconds > 0 else { return 0 }
         return isCounting
@@ -32,11 +33,7 @@ struct EyeRestReminderFullScreenView: View {
                 }
             }
             .onDisappear { timer?.invalidate() }
-            .onKeyPress(.escape) {
-                if isCounting { timer?.invalidate(); isCounting = false }
-                skipAndDismiss()
-                return .handled
-            }
+            // Enter / Space / Esc are handled in AppDelegate (NSEvent monitor) so they work reliably.
     }
 
     @ViewBuilder
@@ -45,6 +42,7 @@ struct EyeRestReminderFullScreenView: View {
             ReminderStyleView(
                 displayStyle: displayStyle,
                 type: .eyeRest,
+                primaryColor: primaryColor,
                 countdown: remainingSeconds,
                 progress: progress,
                 primaryButton: ("str_button_skip".localizedByKey, skipAndDismiss),
@@ -54,6 +52,7 @@ struct EyeRestReminderFullScreenView: View {
             ReminderStyleView(
                 displayStyle: displayStyle,
                 type: .eyeRest,
+                primaryColor: primaryColor,
                 countdown: countdownSeconds,
                 progress: progress,
                 primaryButton: ("str_button_skip".localizedByKey, skipAndDismiss),

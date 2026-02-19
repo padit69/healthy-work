@@ -39,11 +39,23 @@ struct FullScreenReminderWindowContent: View {
         }
     }
 
-    /// Lớp phủ mờ (blur) lên các app phía sau, không phủ full màu.
+    /// Background per type: clear, blur (mờ), or solid color.
     private var reminderBackground: some View {
-        Rectangle()
-            .fill(.ultraThinMaterial)
-            .ignoresSafeArea()
+        let prefs = PreferencesService.load()
+        let style = prefs.reminderBackgroundStyle(for: type)
+        let primaryColor = type.primaryColor(overrideHex: prefs.reminderPrimaryColorHex(for: type))
+        return Group {
+            switch style {
+            case .clear:
+                Color.clear
+            case .blur:
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+            case .solid:
+                primaryColor.opacity(0.92)
+            }
+        }
+        .ignoresSafeArea()
     }
 }
 
@@ -52,6 +64,23 @@ struct FullScreenReminderOverlay: View {
     var type: ReminderType
     var coordinator: ReminderCoordinator
     @Environment(\.modelContext) private var modelContext
+
+    private var backgroundView: some View {
+        let prefs = PreferencesService.load()
+        let style = prefs.reminderBackgroundStyle(for: type)
+        let primaryColor = type.primaryColor(overrideHex: prefs.reminderPrimaryColorHex(for: type))
+        return Group {
+            switch style {
+            case .clear:
+                Color.clear
+            case .blur:
+                Rectangle().fill(.ultraThinMaterial)
+            case .solid:
+                primaryColor.opacity(0.92)
+            }
+        }
+        .ignoresSafeArea()
+    }
 
     var body: some View {
         Group {
@@ -65,6 +94,6 @@ struct FullScreenReminderOverlay: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.ultraThinMaterial)
+        .background(backgroundView)
     }
 }

@@ -11,17 +11,20 @@ struct MovementReminderFullScreenView: View {
     @Environment(\.modelContext) private var modelContext
     private var preferences: UserPreferences { PreferencesService.load() }
     private var displayStyle: ReminderDisplayStyle { preferences.reminderDisplayStyle }
+    private var primaryColor: Color { ReminderType.movement.primaryColor(overrideHex: preferences.reminderPrimaryColorHex(for: .movement)) }
 
     var body: some View {
         ReminderStyleView(
             displayStyle: displayStyle,
             type: .movement,
+            primaryColor: primaryColor,
             countdown: nil,
             progress: 0,
             primaryButton: ("Done", handleDone),
             secondaryButton: ("In a meeting", handleInMeeting)
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Shortcuts: Return = primary (Done), Space = secondary (In a meeting)
         .onKeyPress(.return) {
             handleDone()
             return .handled

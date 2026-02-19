@@ -11,6 +11,8 @@ import SwiftUI
 struct ReminderStyleView: View {
     var displayStyle: ReminderDisplayStyle
     var type: ReminderType
+    /// Primary/accent color for this reminder (from preferences or type default).
+    var primaryColor: Color
     var countdown: Int?
     var progress: Double
     var primaryButton: (title: String, action: () -> Void)
@@ -27,6 +29,7 @@ struct ReminderStyleView: View {
             case .modern:
                 ModernReminderStyleView(
                     type: type,
+                    primaryColor: primaryColor,
                     countdown: countdown,
                     progress: progress,
                     opacity: opacity,
@@ -39,6 +42,7 @@ struct ReminderStyleView: View {
             case .minimal:
                 MinimalReminderStyleView(
                     type: type,
+                    primaryColor: primaryColor,
                     countdown: countdown,
                     progress: progress,
                     opacity: opacity,
@@ -49,6 +53,7 @@ struct ReminderStyleView: View {
             case .bold:
                 BoldReminderStyleView(
                     type: type,
+                    primaryColor: primaryColor,
                     countdown: countdown,
                     progress: progress,
                     opacity: opacity,
@@ -78,6 +83,7 @@ struct ReminderStyleView: View {
 // MARK: - Modern Style
 private struct ModernReminderStyleView: View {
     let type: ReminderType
+    let primaryColor: Color
     let countdown: Int?
     let progress: Double
     let opacity: Double
@@ -121,8 +127,8 @@ private struct ModernReminderStyleView: View {
                 .fill(
                     RadialGradient(
                         colors: [
-                            type.color.opacity(0.2),
-                            type.color.opacity(0.08),
+                            primaryColor.opacity(0.2),
+                            primaryColor.opacity(0.08),
                             Color.clear
                         ],
                         center: .center,
@@ -137,13 +143,13 @@ private struct ModernReminderStyleView: View {
                 .font(.system(size: 80, weight: .light))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [type.color.opacity(0.9), type.color.opacity(0.7)],
+                        colors: [primaryColor.opacity(0.9), primaryColor.opacity(0.7)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
                 .scaleEffect(breathingScale)
-                .shadow(color: type.color.opacity(0.3), radius: 15, x: 0, y: 0)
+                .shadow(color: primaryColor.opacity(0.3), radius: 15, x: 0, y: 0)
         }
     }
 
@@ -175,7 +181,7 @@ private struct ModernReminderStyleView: View {
     private func countdownRing(countdown: Int) -> some View {
         ZStack {
             Circle()
-                .stroke(type.color.opacity(0.12), lineWidth: 3)
+                .stroke(primaryColor.opacity(0.12), lineWidth: 3)
                 .frame(width: 160, height: 160)
                 .blur(radius: 6)
             Circle()
@@ -186,9 +192,9 @@ private struct ModernReminderStyleView: View {
                 .stroke(
                     AngularGradient(
                         gradient: Gradient(colors: [
-                            type.color.opacity(0.9),
-                            type.color.opacity(0.7),
-                            type.color.opacity(0.9)
+                            primaryColor.opacity(0.9),
+                            primaryColor.opacity(0.7),
+                            primaryColor.opacity(0.9)
                         ]),
                         center: .center,
                         startAngle: .degrees(0),
@@ -248,7 +254,7 @@ private struct ModernReminderStyleView: View {
                     Text(primaryButton.title)
                         .font(.system(size: 17, weight: .semibold))
                 }
-                .foregroundColor(type.color)
+                .foregroundColor(primaryColor)
                 .padding(.horizontal, 28)
                 .padding(.vertical, 14)
                 .background(
@@ -271,7 +277,11 @@ private struct ModernReminderStyleView: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, 6)
         case .eyeRest:
-            EmptyView()
+            Text("str_shortcut_hint_eye_rest")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.white.opacity(0.7))
+                .multilineTextAlignment(.center)
+                .padding(.top, 6)
         }
     }
 }
@@ -279,6 +289,7 @@ private struct ModernReminderStyleView: View {
 // MARK: - Minimal Style
 private struct MinimalReminderStyleView: View {
     let type: ReminderType
+    let primaryColor: Color
     let countdown: Int?
     let progress: Double
     let opacity: Double
@@ -302,7 +313,7 @@ private struct MinimalReminderStyleView: View {
                 Spacer()
                 Image(systemName: type.icon)
                     .font(.system(size: 76, weight: .regular))
-                    .foregroundColor(type.color.opacity(0.85))
+                    .foregroundColor(primaryColor.opacity(0.85))
                 VStack(spacing: 12) {
                     Text(type.title.localizedByKey)
                         .font(.system(size: 32, weight: .semibold))
@@ -324,7 +335,7 @@ private struct MinimalReminderStyleView: View {
                                     .fill(Color.gray.opacity(0.15))
                                     .frame(height: 6)
                                 Capsule()
-                                    .fill(type.color.opacity(0.8))
+                                    .fill(primaryColor.opacity(0.8))
                                     .frame(width: max(6, g.size.width * progress), height: 6)
                                     .animation(.linear(duration: 1), value: countdown)
                             }
@@ -339,14 +350,14 @@ private struct MinimalReminderStyleView: View {
                     if let secondary = secondaryButton {
                         Button(action: secondary.action) {
                             Text(secondary.title)
-                                .font(.system(size: 15, weight: .medium))
+                                .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(Color(red: 0.5, green: 0.5, blue: 0.5))
-                                .padding(.horizontal, 22)
+                                .padding(.horizontal, 26)
                                 .padding(.vertical, 12)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 8)
+                                    RoundedRectangle(cornerRadius: 50)
                                         .stroke(Color.gray.opacity(0.25), lineWidth: 1)
-                                        .background(RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.5)))
+                                        .background(RoundedRectangle(cornerRadius: 50).fill(Color.white.opacity(0.5)))
                                 )
                         }
                         .buttonStyle(.plain)
@@ -357,7 +368,7 @@ private struct MinimalReminderStyleView: View {
                             .foregroundColor(.white)
                             .padding(.horizontal, 26)
                             .padding(.vertical, 12)
-                            .background(Capsule().fill(type.color))
+                            .background(Capsule().fill(primaryColor))
                     }
                     .buttonStyle(.plain)
                 }
@@ -378,7 +389,11 @@ private struct MinimalReminderStyleView: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, 4)
         case .eyeRest:
-            EmptyView()
+            Text("str_shortcut_hint_eye_rest")
+                .font(.system(size: 11))
+                .foregroundColor(Color(red: 0.45, green: 0.45, blue: 0.45))
+                .multilineTextAlignment(.center)
+                .padding(.top, 4)
         }
     }
 }
@@ -386,6 +401,7 @@ private struct MinimalReminderStyleView: View {
 // MARK: - Bold Style
 private struct BoldReminderStyleView: View {
     let type: ReminderType
+    let primaryColor: Color
     let countdown: Int?
     let progress: Double
     let opacity: Double
@@ -396,13 +412,13 @@ private struct BoldReminderStyleView: View {
 
     var body: some View {
         ZStack {
-            type.color.opacity(0.85)
+            primaryColor.opacity(0.85)
                 .ignoresSafeArea()
             LinearGradient(
                 colors: [
-                    type.color.opacity(0.7),
-                    type.color.opacity(0.65),
-                    type.color.opacity(0.75)
+                    primaryColor.opacity(0.7),
+                    primaryColor.opacity(0.65),
+                    primaryColor.opacity(0.75)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -476,7 +492,7 @@ private struct BoldReminderStyleView: View {
                                     .font(.system(size: 16, weight: .black))
                                     .tracking(2)
                             }
-                            .foregroundColor(type.color.opacity(0.9))
+                            .foregroundColor(primaryColor.opacity(0.9))
                             .padding(.horizontal, 28)
                             .padding(.vertical, 14)
                             .background(Capsule().fill(Color.white.opacity(0.9)))
@@ -491,7 +507,7 @@ private struct BoldReminderStyleView: View {
                                 .font(.system(size: 16, weight: .black))
                                 .tracking(2)
                         }
-                        .foregroundColor(type.color)
+                        .foregroundColor(primaryColor)
                         .padding(.horizontal, 32)
                         .padding(.vertical, 14)
                         .background(Capsule().fill(Color.white))
@@ -517,15 +533,20 @@ private struct BoldReminderStyleView: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, 4)
         case .eyeRest:
-            EmptyView()
+            Text("str_shortcut_hint_eye_rest")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.white.opacity(0.86))
+                .multilineTextAlignment(.center)
+                .padding(.top, 4)
         }
     }
 }
 
 #Preview("Modern") {
     ReminderStyleView(
-        displayStyle: .modern,
+        displayStyle: .minimal,
         type: .eyeRest,
+        primaryColor: ReminderType.eyeRest.color,
         countdown: 18,
         progress: 0.1,
         primaryButton: ("Start", {}),

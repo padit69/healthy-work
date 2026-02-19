@@ -6,6 +6,15 @@
 import Foundation
 import SwiftUI
 
+/// Background appearance for full-screen reminder overlay (per reminder type).
+enum ReminderBackgroundStyle: String, Codable, CaseIterable, Identifiable {
+    case clear
+    case blur
+    case solid
+
+    var id: String { rawValue }
+}
+
 /// How the full-screen reminder overlay is styled (inspired by Health Reminder).
 enum ReminderDisplayStyle: String, Codable, CaseIterable, Identifiable {
     case modern = "Modern"
@@ -88,6 +97,16 @@ struct UserPreferences: Codable, Equatable {
     var minimalMode: Bool
     /// Full-screen reminder visual style (Modern / Minimal / Bold).
     var reminderDisplayStyle: ReminderDisplayStyle
+
+    // MARK: - Reminder appearance (per type)
+    /// Background style for full-screen reminder: clear, blur, or solid (nil = .blur for backward compat).
+    var reminderWaterBackgroundStyle: ReminderBackgroundStyle?
+    var reminderEyeRestBackgroundStyle: ReminderBackgroundStyle?
+    var reminderMovementBackgroundStyle: ReminderBackgroundStyle?
+    /// Primary/accent color override per type (hex "#RRGGBB"). Nil = use type default.
+    var reminderWaterPrimaryColorHex: String?
+    var reminderEyeRestPrimaryColorHex: String?
+    var reminderMovementPrimaryColorHex: String?
 
     enum Gender: String, Codable, CaseIterable {
         case male
@@ -186,7 +205,31 @@ struct UserPreferences: Codable, Equatable {
             appearance: .system,
             language: .en,
             minimalMode: false,
-            reminderDisplayStyle: .modern
+            reminderDisplayStyle: .modern,
+            reminderWaterBackgroundStyle: .blur,
+            reminderEyeRestBackgroundStyle: .blur,
+            reminderMovementBackgroundStyle: .blur,
+            reminderWaterPrimaryColorHex: nil,
+            reminderEyeRestPrimaryColorHex: nil,
+            reminderMovementPrimaryColorHex: nil
         )
+    }
+
+    /// Resolved background style for a reminder type (nil prefs → .blur).
+    func reminderBackgroundStyle(for type: ReminderType) -> ReminderBackgroundStyle {
+        switch type {
+        case .water: return reminderWaterBackgroundStyle ?? .blur
+        case .eyeRest: return reminderEyeRestBackgroundStyle ?? .blur
+        case .movement: return reminderMovementBackgroundStyle ?? .blur
+        }
+    }
+
+    /// Primary color override hex for a reminder type. Nil = use type default.
+    func reminderPrimaryColorHex(for type: ReminderType) -> String? {
+        switch type {
+        case .water: return reminderWaterPrimaryColorHex
+        case .eyeRest: return reminderEyeRestPrimaryColorHex
+        case .movement: return reminderMovementPrimaryColorHex
+        }
     }
 }
