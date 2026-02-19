@@ -101,6 +101,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         window.isReleasedWhenClosed = false
 
         let rootView = FullScreenReminderWindowContent(type: type, coordinator: coordinator)
+            .environment(\.locale, PreferencesService.load().language.locale)
             .modelContainer(container)
         window.contentView = NSHostingView(rootView: rootView)
 

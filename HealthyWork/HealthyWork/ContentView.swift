@@ -14,6 +14,7 @@ struct ContentView: View {
 
     var body: some View {
         SettingsView(viewModel: settingsViewModel, reminderCoordinator: reminderCoordinator)
+            .environment(\.locale, settingsViewModel.preferences.language.locale)
             .background(WindowAccessor())
     }
 }

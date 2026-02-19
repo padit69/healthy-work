@@ -210,7 +210,7 @@ private struct ModernReminderStyleView: View {
                         )
                     )
                     .contentTransition(.numericText())
-                Text("seconds")
+                Text("str_seconds")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.white.opacity(0.7))
                     .textCase(.uppercase)
@@ -265,7 +265,7 @@ private struct ModernReminderStyleView: View {
     private var shortcutHint: some View {
         switch type {
         case .water, .movement:
-            Text("Press Enter to confirm, Space if you're in a meeting. Esc to close.")
+            Text("str_shortcut_hint")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundColor(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
@@ -372,7 +372,7 @@ private struct MinimalReminderStyleView: View {
     private var shortcutHint: some View {
         switch type {
         case .water, .movement:
-            Text("Phím tắt: Enter = xác nhận, Space = đang họp, Esc = đóng.")
+            Text("str_shortcut_hint")
                 .font(.system(size: 11))
                 .foregroundColor(Color(red: 0.45, green: 0.45, blue: 0.45))
                 .multilineTextAlignment(.center)
@@ -455,7 +455,7 @@ private struct BoldReminderStyleView: View {
                                 .font(.system(size: 64, weight: .black, design: .rounded))
                                 .foregroundColor(.white)
                                 .contentTransition(.numericText())
-                            Text("SEC")
+                            Text("str_sec")
                                 .font(.system(size: 14, weight: .black))
                                 .foregroundColor(.white.opacity(0.8))
                                 .tracking(3)
@@ -511,7 +511,7 @@ private struct BoldReminderStyleView: View {
     private var shortcutHint: some View {
         switch type {
         case .water, .movement:
-            Text("Phím tắt: Enter = xác nhận, Space = đang họp, Esc = đóng.")
+            Text("str_shortcut_hint")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundColor(.white.opacity(0.86))
                 .multilineTextAlignment(.center)

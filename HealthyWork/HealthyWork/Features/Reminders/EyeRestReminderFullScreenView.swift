@@ -47,7 +47,7 @@ struct EyeRestReminderFullScreenView: View {
                 type: .eyeRest,
                 countdown: remainingSeconds,
                 progress: progress,
-                primaryButton: ("Skip", skipAndDismiss),
+                primaryButton: ("str_button_skip".localizedByKey, skipAndDismiss),
                 secondaryButton: nil
             )
         } else {
@@ -56,7 +56,7 @@ struct EyeRestReminderFullScreenView: View {
                 type: .eyeRest,
                 countdown: countdownSeconds,
                 progress: progress,
-                primaryButton: ("Skip", skipAndDismiss),
+                primaryButton: ("str_button_skip".localizedByKey, skipAndDismiss),
                 secondaryButton: nil
             )
         }

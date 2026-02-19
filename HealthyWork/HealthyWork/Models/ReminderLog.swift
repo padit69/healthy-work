@@ -51,25 +51,25 @@ enum ReminderType: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .water: return "Time to Drink Water"
-        case .eyeRest: return "Time to Rest Your Eyes"
-        case .movement: return "Time to Stand Up"
+        case .water: return "Time to Drink Water".localizedByKey
+        case .eyeRest: return "Time to Rest Your Eyes".localizedByKey
+        case .movement: return "Time to Stand Up".localizedByKey
         }
     }
 
     var subtitle: String {
         switch self {
-        case .water: return "Stay hydrated for better health"
-        case .eyeRest: return "Look at something 20 feet away"
-        case .movement: return "Stretch and move around"
+        case .water: return "Stay hydrated for better health".localizedByKey
+        case .eyeRest: return "Look at something 20 feet away".localizedByKey
+        case .movement: return "Stretch and move around".localizedByKey
         }
     }
 
     var helper: String {
         switch self {
-        case .water: return "Keep your body hydrated"
-        case .eyeRest: return "Give your eyes a break"
-        case .movement: return "Improve your circulation"
+        case .water: return "Keep your body hydrated".localizedByKey
+        case .eyeRest: return "Give your eyes a break".localizedByKey
+        case .movement: return "Improve your circulation".localizedByKey
         }
     }
 }

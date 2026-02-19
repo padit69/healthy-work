@@ -35,7 +35,7 @@ struct ReminderCard<Content: View>: View {
                     }
                 }
             Spacer(minLength: 60)
-            Text("Press Esc to close")
+            Text("str_press_esc")
                 .font(.system(size: 11, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
                 .padding(.bottom, 28)

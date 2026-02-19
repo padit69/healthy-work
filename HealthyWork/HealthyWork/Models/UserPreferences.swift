@@ -17,11 +17,11 @@ enum ReminderDisplayStyle: String, Codable, CaseIterable, Identifiable {
     var description: String {
         switch self {
         case .modern:
-            return "Soft gradients with gentle glow - easy on the eyes"
+            return "Soft gradients with gentle glow - easy on the eyes".localizedByKey
         case .minimal:
-            return "Warm, clean design with reduced brightness"
+            return "Warm, clean design with reduced brightness".localizedByKey
         case .bold:
-            return "Rich colors - attention-grabbing yet eye-friendly"
+            return "Rich colors - attention-grabbing yet eye-friendly".localizedByKey
         }
     }
 
@@ -92,22 +92,58 @@ struct UserPreferences: Codable, Equatable {
     enum Gender: String, Codable, CaseIterable {
         case male
         case female
+
+        var localizedName: String {
+            switch self {
+            case .male:
+                return "Male".localizedByKey
+            case .female:
+                return "Female".localizedByKey
+            }
+        }
     }
 
     enum WaterUnit: String, Codable, CaseIterable {
         case ml
         case oz
+
+        var localizedName: String {
+            switch self {
+            case .ml:
+                return "ml".localizedByKey
+            case .oz:
+                return "oz".localizedByKey
+            }
+        }
     }
 
     enum Appearance: String, Codable, CaseIterable {
         case light
         case dark
         case system
+
+        var localizedName: String {
+            switch self {
+            case .light:
+                return "Light".localizedByKey
+            case .dark:
+                return "Dark".localizedByKey
+            case .system:
+                return "System".localizedByKey
+            }
+        }
     }
 
     enum Language: String, Codable, CaseIterable {
         case vi
         case en
+
+        var locale: Locale {
+            switch self {
+            case .en: return Locale(identifier: "en")
+            case .vi: return Locale(identifier: "vi")
+            }
+        }
     }
 
     static let defaultWorkStart: Date = {

@@ -95,6 +95,8 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .about: return "info.circle"
         }
     }
+    
+    var name: String { self.rawValue.localizedByKey }
 }
 
 struct SettingsView: View {
@@ -112,7 +114,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationSplitView {
             List(sidebarSections, selection: $selectedSection) { section in
-                Label(section.rawValue, systemImage: section.systemImage)
+                Label(section.name, systemImage: section.systemImage)
                     .tag(section)
             }
             .listStyle(.sidebar)
@@ -123,7 +125,7 @@ struct SettingsView: View {
             }
             .formStyle(.grouped)
             .scrollContentBackground(.visible)
-            .navigationTitle(selectedSection.rawValue)
+            .navigationTitle(selectedSection.name)
         }
         .onChange(of: viewModel.preferences) { _, _ in
             viewModel.saveAndReschedule()
@@ -371,16 +373,18 @@ struct SettingsView: View {
             }
             LabeledContent("Gender") {
                 Picker("", selection: $viewModel.preferences.gender) {
-                    Text("None").tag(nil as UserPreferences.Gender?)
+                    Text("None".localizedByKey).tag(nil as UserPreferences.Gender?)
                     ForEach(UserPreferences.Gender.allCases, id: \.self) { g in
-                        Text(g.rawValue.capitalized).tag(g as UserPreferences.Gender?)
+                        Text(g.localizedName).tag(g as UserPreferences.Gender?)
                     }
                 }
                 .labelsHidden()
             }
             LabeledContent("Unit") {
                 Picker("", selection: $viewModel.preferences.waterUnit) {
-                    ForEach(UserPreferences.WaterUnit.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    ForEach(UserPreferences.WaterUnit.allCases, id: \.self) { unit in
+                        Text(unit.localizedName).tag(unit)
+                    }
                 }
                 .labelsHidden()
             }
@@ -528,8 +532,8 @@ struct SettingsView: View {
             Section {
                 LabeledContent("Theme") {
                     Picker("", selection: $viewModel.preferences.appearance) {
-                        ForEach(UserPreferences.Appearance.allCases, id: \.self) {
-                            Text($0.rawValue.capitalized).tag($0)
+                        ForEach(UserPreferences.Appearance.allCases, id: \.self) { appearance in
+                            Text(appearance.localizedName).tag(appearance)
                         }
                     }
                     .labelsHidden()

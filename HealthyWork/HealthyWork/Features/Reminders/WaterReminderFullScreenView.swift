@@ -20,8 +20,8 @@ struct WaterReminderFullScreenView: View {
             type: .water,
             countdown: nil,
             progress: 0,
-            primaryButton: ("I drank", handleDrank),
-            secondaryButton: ("Skip", handleSkip)
+            primaryButton: ("str_button_i_drank".localizedByKey, handleDrank),
+            secondaryButton: ("str_button_skip".localizedByKey, handleSkip)
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onKeyPress(.return) {
