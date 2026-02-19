@@ -505,6 +505,16 @@ struct SettingsView: View {
                     ),
                     primaryColorHexBinding: $viewModel.preferences.reminderWaterPrimaryColorHex
                 )
+                if let coordinator = reminderCoordinator {
+                    Button(action: { coordinator.show(.water) }) {
+                        Label("Preview", systemImage: "eye")
+                            .font(.system(size: 13, weight: .medium))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+                }
             } header: {
                 Text("Full-screen reminder style")
                     .settingsSectionHeader()
@@ -567,6 +577,16 @@ struct SettingsView: View {
                     ),
                     primaryColorHexBinding: $viewModel.preferences.reminderEyeRestPrimaryColorHex
                 )
+                if let coordinator = reminderCoordinator {
+                    Button(action: { coordinator.show(.eyeRest) }) {
+                        Label("Preview", systemImage: "eye")
+                            .font(.system(size: 13, weight: .medium))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+                }
             } header: {
                 Text("Full-screen reminder style")
                     .settingsSectionHeader()
@@ -602,6 +622,16 @@ struct SettingsView: View {
                     ),
                     primaryColorHexBinding: $viewModel.preferences.reminderMovementPrimaryColorHex
                 )
+                if let coordinator = reminderCoordinator {
+                    Button(action: { coordinator.show(.movement) }) {
+                        Label("Preview", systemImage: "eye")
+                            .font(.system(size: 13, weight: .medium))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+                }
             } header: {
                 Text("Full-screen reminder style")
                     .settingsSectionHeader()
