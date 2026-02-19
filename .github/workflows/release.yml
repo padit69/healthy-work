@@ -1,0 +1,185 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on tags like v1.0.0, v1.2.3, etc.
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: macos-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      
+      - name: Show build environment
+        run: |
+          echo "Building version: ${{ steps.get_version.outputs.VERSION }}"
+          xcodebuild -version
+          xcode-select -p
+          sw_vers
+      
+      - name: Build app
+        run: |
+          cd HealthyWork
+          xcodebuild \
+            -project HealthyWork.xcodeproj \
+            -scheme HealthyWork \
+            -configuration Release \
+            -derivedDataPath ./build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build
+      
+      - name: Verify build
+        run: |
+          echo "Checking build output..."
+          ls -la HealthyWork/build/Build/Products/Release/
+          if [ -d "HealthyWork/build/Build/Products/Release/HealthyWork.app" ]; then
+            echo "✅ App bundle created successfully"
+          else
+            echo "❌ App bundle not found"
+            exit 1
+          fi
+      
+      - name: Package app as ZIP
+        run: |
+          cd HealthyWork/build/Build/Products/Release
+          
+          # Create a clean directory for the app
+          mkdir -p HealthyWork-${{ steps.get_version.outputs.VERSION }}
+          cp -R HealthyWork.app HealthyWork-${{ steps.get_version.outputs.VERSION }}/
+          
+          # Create ZIP archive
+          zip -r -y HealthyWork-${{ steps.get_version.outputs.VERSION }}.zip HealthyWork-${{ steps.get_version.outputs.VERSION }}
+          
+          # Move to artifacts directory
+          mkdir -p ../../../../artifacts
+          mv HealthyWork-${{ steps.get_version.outputs.VERSION }}.zip ../../../../artifacts/
+          
+          echo "✅ ZIP package created"
+      
+      - name: Create DMG installer
+        run: |
+          cd HealthyWork/build/Build/Products/Release
+          
+          # Create temporary directory for DMG contents
+          mkdir -p dmg_contents
+          cp -R HealthyWork.app dmg_contents/
+          
+          # Create Applications symlink for easy installation
+          ln -s /Applications dmg_contents/Applications
+          
+          # Create DMG using hdiutil
+          hdiutil create -volname "Eye Reminder ${{ steps.get_version.outputs.VERSION }}" \
+            -srcfolder dmg_contents \
+            -ov -format UDZO \
+            HealthyWork-${{ steps.get_version.outputs.VERSION }}.dmg
+          
+          mv HealthyWork-${{ steps.get_version.outputs.VERSION }}.dmg ../../../../artifacts/
+          
+          echo "✅ DMG installer created"
+      
+      - name: Generate checksums
+        run: |
+          cd HealthyWork/artifacts
+          shasum -a 256 HealthyWork-${{ steps.get_version.outputs.VERSION }}.zip > checksums.txt
+          shasum -a 256 HealthyWork-${{ steps.get_version.outputs.VERSION }}.dmg >> checksums.txt
+          cat checksums.txt
+      
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          ## 👁️ Eye Reminder ${{ steps.get_version.outputs.VERSION }}
+          
+          A gentle macOS menu bar application that reminds you to rest your eyes at regular intervals, following the 20-20-20 rule.
+          
+          ### 📦 Installation
+          
+          **Option 1: DMG Installer (Recommended)**
+          1. Download `HealthyWork-${{ steps.get_version.outputs.VERSION }}.dmg`
+          2. Open the DMG file
+          3. Drag Eye Reminder to your Applications folder
+          4. Launch from Applications
+          
+          **Option 2: ZIP Archive**
+          1. Download `HealthyWork-${{ steps.get_version.outputs.VERSION }}.zip`
+          2. Extract the archive
+          3. Move Eye Reminder.app to your Applications folder
+          4. Launch from Applications
+          
+          ### ⚙️ System Requirements
+          
+          - macOS 13.0 (Ventura) or later
+          - Apple Silicon or Intel processor
+          
+          ### 🔐 Security Note
+          
+          This app is not code-signed. On first launch:
+          1. Right-click (or Control-click) on Eye Reminder.app
+          2. Select "Open" from the context menu
+          3. Click "Open" in the security dialog
+          
+          ### ✨ Features
+          
+          - Menu bar integration
+          - Customizable reminder intervals (5-60 minutes)
+          - Adjustable reminder duration (10-120 seconds)
+          - Gentle full-screen overlay
+          - Launch at login option
+          - Follows the 20-20-20 rule for eye health
+          
+          ### 📝 Checksums
+          
+          ```
+          $(cat HealthyWork/artifacts/checksums.txt)
+          ```
+          
+          ### 🐛 Known Issues
+          
+          If you encounter any issues, please [report them on GitHub](https://github.com/${{ github.repository }}/issues).
+          
+          ---
+          
+          **Take care of your eyes! 👁️**
+          EOF
+          
+          cat release_notes.md
+          echo "notes_file=release_notes.md" >> $GITHUB_OUTPUT
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Eye Reminder ${{ steps.get_version.outputs.VERSION }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.VERSION, 'alpha') || contains(steps.get_version.outputs.VERSION, 'beta') || contains(steps.get_version.outputs.VERSION, 'rc') }}
+          files: |
+            HealthyWork/artifacts/HealthyWork-${{ steps.get_version.outputs.VERSION }}.zip
+            HealthyWork/artifacts/HealthyWork-${{ steps.get_version.outputs.VERSION }}.dmg
+            HealthyWork/artifacts/checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Release summary
+        run: |
+          echo "## 🎉 Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Release URL:** ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.get_version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ ZIP Archive" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ DMG Installer" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Checksums" >> $GITHUB_STEP_SUMMARY

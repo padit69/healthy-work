@@ -1,0 +1,46 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build macOS App
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Show Xcode version
+        run: |
+          xcodebuild -version
+          xcode-select -p
+      
+      - name: Build app
+        run: |
+          cd HealthyWork
+          xcodebuild \
+            -project HealthyWork.xcodeproj \
+            -scheme HealthyWork \
+            -configuration Release \
+            -derivedDataPath ./build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+      
+      - name: Check build output
+        run: |
+          echo "✅ Build completed successfully!"
+          ls -la HealthyWork/build/Build/Products/Release/
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: HealthyWork-Build-${{ github.sha }}
+          path: HealthyWork/build/Build/Products/Release/HealthyWork.app
+          retention-days: 7

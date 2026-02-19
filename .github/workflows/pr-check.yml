@@ -1,0 +1,93 @@
+name: PR Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [ opened, synchronize, reopened ]
+
+jobs:
+  validate:
+    name: Validate Pull Request
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Show environment
+        run: |
+          echo "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}"
+          echo "Branch: ${{ github.head_ref }}"
+          xcodebuild -version
+          xcode-select -p
+      
+      - name: Build check
+        id: build
+        run: |
+          cd HealthyWork
+          xcodebuild \
+            -project HealthyWork.xcodeproj \
+            -scheme HealthyWork \
+            -configuration Debug \
+            -derivedDataPath ./build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+      
+      - name: Verify build output
+        run: |
+          if [ -d "HealthyWork/build/Build/Products/Debug/HealthyWork.app" ]; then
+            echo "✅ Build successful"
+            echo "BUILD_STATUS=success" >> $GITHUB_ENV
+          else
+            echo "❌ Build failed"
+            echo "BUILD_STATUS=failed" >> $GITHUB_ENV
+            exit 1
+          fi
+      
+      - name: Update PR with status
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const buildStatus = process.env.BUILD_STATUS;
+            const emoji = buildStatus === 'success' ? '✅' : '❌';
+            const status = buildStatus === 'success' ? 'successful' : 'failed';
+            
+            const body = `${emoji} **Build ${status}**
+            
+            ${buildStatus === 'success' ? 
+              '✨ Your changes build successfully! The code is ready for review.' :
+              '⚠️ The build failed. Please check the logs and fix any issues.'
+            }
+            
+            **Build Details:**
+            - Configuration: Debug
+            - macOS: Latest
+            - Xcode: Default version
+            
+            [View full build logs](${context.payload.pull_request.html_url}/checks)
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+      
+      - name: Add build summary
+        if: always()
+        run: |
+          echo "## PR Build Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "$BUILD_STATUS" = "success" ]; then
+            echo "✅ **Build Successful**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The pull request builds without errors." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Build Failed**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please review the build logs and fix any issues." >> $GITHUB_STEP_SUMMARY
+          fi
