@@ -59,6 +59,7 @@ jobs:
               -scheme HealthyWork \
               -configuration Release \
               -derivedDataPath ./build \
+              CODE_SIGN_ENTITLEMENTS=HealthyWork/HealthyWork.entitlements \
               CODE_SIGN_IDENTITY="$IDENTITY" \
               CODE_SIGN_STYLE=Manual \
               OTHER_CODE_SIGN_FLAGS="--timestamp" \
