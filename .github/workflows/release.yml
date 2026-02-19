@@ -118,9 +118,9 @@ jobs:
           # Create ZIP archive
           zip -r -y HealthyWork-${{ steps.get_version.outputs.VERSION }}.zip HealthyWork-${{ steps.get_version.outputs.VERSION }}
           
-          # Move to artifacts directory
-          mkdir -p ../../../../artifacts
-          mv HealthyWork-${{ steps.get_version.outputs.VERSION }}.zip ../../../../artifacts/
+          # Move to artifacts directory (repo root: Release -> Products -> Build -> build -> HealthyWork -> root)
+          mkdir -p ../../../../../artifacts
+          mv HealthyWork-${{ steps.get_version.outputs.VERSION }}.zip ../../../../../artifacts/
           
           echo "✅ ZIP package created"
       
@@ -141,7 +141,7 @@ jobs:
             -ov -format UDZO \
             HealthyWork-${{ steps.get_version.outputs.VERSION }}.dmg
           
-          mv HealthyWork-${{ steps.get_version.outputs.VERSION }}.dmg ../../../../artifacts/
+          mv HealthyWork-${{ steps.get_version.outputs.VERSION }}.dmg ../../../../../artifacts/
           
           echo "✅ DMG installer created"
       
