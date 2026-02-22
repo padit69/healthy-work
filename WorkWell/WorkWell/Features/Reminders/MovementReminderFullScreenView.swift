@@ -20,8 +20,8 @@ struct MovementReminderFullScreenView: View {
             primaryColor: primaryColor,
             countdown: nil,
             progress: 0,
-            primaryButton: ("Done", handleDone),
-            secondaryButton: ("In a meeting", handleInMeeting)
+            primaryButton: ("Done".localizedByKey, handleDone),
+            secondaryButton: ("In a meeting".localizedByKey, handleInMeeting)
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         // Shortcuts: Return = primary (Done), Space = secondary (In a meeting)
