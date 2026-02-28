@@ -21,6 +21,8 @@ struct ReminderStyleView: View {
     var primaryButtonDisabled: Bool = false
     /// When true (e.g. focus action), secondary button is disabled and not tappable.
     var secondaryButtonDisabled: Bool = false
+    /// When true, show a label that focus mode is on (buttons disabled until countdown).
+    var focusModeEnabled: Bool = false
 
     @State private var opacity: Double = 0
     @State private var scale: CGFloat = 0.92
@@ -43,7 +45,8 @@ struct ReminderStyleView: View {
                     primaryButton: primaryButton,
                     secondaryButton: secondaryButton,
                     primaryButtonDisabled: primaryButtonDisabled,
-                    secondaryButtonDisabled: secondaryButtonDisabled
+                    secondaryButtonDisabled: secondaryButtonDisabled,
+                    focusModeEnabled: focusModeEnabled
                 )
             case .minimal:
                 MinimalReminderStyleView(
@@ -56,7 +59,8 @@ struct ReminderStyleView: View {
                     primaryButton: primaryButton,
                     secondaryButton: secondaryButton,
                     primaryButtonDisabled: primaryButtonDisabled,
-                    secondaryButtonDisabled: secondaryButtonDisabled
+                    secondaryButtonDisabled: secondaryButtonDisabled,
+                    focusModeEnabled: focusModeEnabled
                 )
             case .bold:
                 BoldReminderStyleView(
@@ -70,7 +74,8 @@ struct ReminderStyleView: View {
                     primaryButton: primaryButton,
                     secondaryButton: secondaryButton,
                     primaryButtonDisabled: primaryButtonDisabled,
-                    secondaryButtonDisabled: secondaryButtonDisabled
+                    secondaryButtonDisabled: secondaryButtonDisabled,
+                    focusModeEnabled: focusModeEnabled
                 )
             }
         }
@@ -104,6 +109,7 @@ private struct ModernReminderStyleView: View {
     let secondaryButton: (title: String, action: () -> Void)?
     let primaryButtonDisabled: Bool
     let secondaryButtonDisabled: Bool
+    let focusModeEnabled: Bool
 
     @State private var iconOffset: CGFloat = 0
 
@@ -124,6 +130,9 @@ private struct ModernReminderStyleView: View {
                 Spacer()
                 iconSection
                     .offset(y: iconOffset)
+                if focusModeEnabled {
+                    focusModeBadge
+                }
                 titleSection
                 centerSection
                 Spacer()
@@ -184,6 +193,19 @@ private struct ModernReminderStyleView: View {
                 .scaleEffect(breathingScale)
                 .shadow(color: primaryColor.opacity(0.3), radius: 15, x: 0, y: 0)
         }
+    }
+
+    private var focusModeBadge: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 12, weight: .semibold))
+            Text("str_focus_mode_on".localizedByKey)
+                .font(.system(size: 13, weight: .semibold))
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Capsule().fill(primaryColor.opacity(0.85)))
     }
 
     private var titleSection: some View {
@@ -335,6 +357,7 @@ private struct MinimalReminderStyleView: View {
     let secondaryButton: (title: String, action: () -> Void)?
     let primaryButtonDisabled: Bool
     let secondaryButtonDisabled: Bool
+    let focusModeEnabled: Bool
 
     var body: some View {
         ZStack {
@@ -353,6 +376,18 @@ private struct MinimalReminderStyleView: View {
                 Image(systemName: type.icon)
                     .font(.system(size: 76, weight: .regular))
                     .foregroundColor(primaryColor.opacity(0.85))
+                if focusModeEnabled {
+                    HStack(spacing: 6) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("str_focus_mode_on".localizedByKey)
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundColor(primaryColor)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(primaryColor.opacity(0.18)))
+                }
                 VStack(spacing: 12) {
                     Text(type.title.localizedByKey)
                         .font(.system(size: 32, weight: .semibold))
@@ -454,6 +489,7 @@ private struct BoldReminderStyleView: View {
     let secondaryButton: (title: String, action: () -> Void)?
     let primaryButtonDisabled: Bool
     let secondaryButtonDisabled: Bool
+    let focusModeEnabled: Bool
 
     @State private var iconRotation: Double = 0
     @State private var iconVerticalOffset: CGFloat = 0
@@ -493,6 +529,19 @@ private struct BoldReminderStyleView: View {
                 }
                 .rotationEffect(.degrees(iconRotation))
                 .offset(y: iconVerticalOffset)
+
+                if focusModeEnabled {
+                    HStack(spacing: 6) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 12, weight: .bold))
+                        Text("str_focus_mode_on".localizedByKey)
+                            .font(.system(size: 13, weight: .bold))
+                    }
+                    .foregroundColor(primaryColor)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Color.white.opacity(0.95)))
+                }
 
                 VStack(spacing: 12) {
                     Text(type.title)

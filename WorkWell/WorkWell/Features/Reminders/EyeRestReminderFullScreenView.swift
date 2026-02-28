@@ -59,7 +59,8 @@ struct EyeRestReminderFullScreenView: View {
                 primaryButton: ("str_button_skip".localizedByKey, skipAndDismiss),
                 secondaryButton: nil,
                 primaryButtonDisabled: focusEnabled && isCounting,
-                secondaryButtonDisabled: false
+                secondaryButtonDisabled: false,
+                focusModeEnabled: focusEnabled
             )
         } else {
             ReminderStyleView(
@@ -71,7 +72,8 @@ struct EyeRestReminderFullScreenView: View {
                 primaryButton: ("str_button_skip".localizedByKey, skipAndDismiss),
                 secondaryButton: nil,
                 primaryButtonDisabled: false,
-                secondaryButtonDisabled: false
+                secondaryButtonDisabled: false,
+                focusModeEnabled: focusEnabled
             )
         }
     }

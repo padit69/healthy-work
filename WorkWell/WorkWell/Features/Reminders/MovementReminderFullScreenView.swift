@@ -31,7 +31,8 @@ struct MovementReminderFullScreenView: View {
             primaryButton: ("Done".localizedByKey, handleDone),
             secondaryButton: ("In a meeting".localizedByKey, handleInMeeting),
             primaryButtonDisabled: focusEnabled && isFocusCounting,
-            secondaryButtonDisabled: focusEnabled && isFocusCounting
+            secondaryButtonDisabled: focusEnabled && isFocusCounting,
+            focusModeEnabled: focusEnabled
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {

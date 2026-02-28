@@ -32,7 +32,8 @@ struct WaterReminderFullScreenView: View {
             primaryButton: ("str_button_i_drank".localizedByKey, handleDrank),
             secondaryButton: ("str_button_skip".localizedByKey, handleSkip),
             primaryButtonDisabled: focusEnabled && isFocusCounting,
-            secondaryButtonDisabled: focusEnabled && isFocusCounting
+            secondaryButtonDisabled: focusEnabled && isFocusCounting,
+            focusModeEnabled: focusEnabled
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
