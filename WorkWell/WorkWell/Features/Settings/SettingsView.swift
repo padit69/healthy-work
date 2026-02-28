@@ -436,7 +436,8 @@ struct SettingsView: View {
         range: ClosedRange<Double>,
         step: Double,
         tint: Color,
-        label: String
+        label: String,
+        unit: String = "min"
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -449,7 +450,7 @@ struct SettingsView: View {
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(tint)
                         .monospacedDigit()
-                    Text("min")
+                    Text(unit)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
@@ -498,6 +499,37 @@ struct SettingsView: View {
                     .settingsSectionHeader()
             } footer: {
                 Text("Daily water goal is calculated from your weight unless you override it.")
+                    .settingsSectionFooter()
+            }
+            Section {
+                LabeledContent {
+                    Toggle("", isOn: Binding(
+                        get: { viewModel.preferences.waterFocusActionEnabled ?? false },
+                        set: { viewModel.preferences.waterFocusActionEnabled = $0 }
+                    ))
+                    .labelsHidden()
+                } label: {
+                    Label("Focus action", systemImage: "lock.fill")
+                        .font(.system(size: 13))
+                }
+                if (viewModel.preferences.waterFocusActionEnabled ?? false) {
+                    intervalSlider(
+                        value: Binding(
+                            get: { Double(viewModel.preferences.waterFocusMinSeconds ?? 30) },
+                            set: { viewModel.preferences.waterFocusMinSeconds = Int($0) }
+                        ),
+                        range: 10...100,
+                        step: 5,
+                        tint: .blue,
+                        label: "Min countdown",
+                        unit: "sec"
+                    )
+                }
+            } header: {
+                Text("Focus action")
+                    .settingsSectionHeader()
+            } footer: {
+                Text("When on, buttons stay disabled until the countdown (seconds) finishes. Ensures you take a short break before dismissing.")
                     .settingsSectionFooter()
             }
             Section {
@@ -573,6 +605,24 @@ struct SettingsView: View {
                     .settingsSectionFooter()
             }
             Section {
+                LabeledContent {
+                    Toggle("", isOn: Binding(
+                        get: { viewModel.preferences.eyeRestFocusActionEnabled ?? false },
+                        set: { viewModel.preferences.eyeRestFocusActionEnabled = $0 }
+                    ))
+                    .labelsHidden()
+                } label: {
+                    Label("Focus action", systemImage: "lock.fill")
+                        .font(.system(size: 13))
+                }
+            } header: {
+                Text("Focus action")
+                    .settingsSectionHeader()
+            } footer: {
+                Text("When on, Skip is disabled until the full countdown ends.")
+                    .settingsSectionFooter()
+            }
+            Section {
                 reminderAppearanceRows(
                     backgroundBinding: Binding(
                         get: { viewModel.preferences.reminderEyeRestBackgroundStyle ?? .blur },
@@ -615,6 +665,37 @@ struct SettingsView: View {
                     .settingsSectionHeader()
             } footer: {
                 Text("Show a random stretch or movement suggestion each time.")
+                    .settingsSectionFooter()
+            }
+            Section {
+                LabeledContent {
+                    Toggle("", isOn: Binding(
+                        get: { viewModel.preferences.movementFocusActionEnabled ?? false },
+                        set: { viewModel.preferences.movementFocusActionEnabled = $0 }
+                    ))
+                    .labelsHidden()
+                } label: {
+                    Label("Focus action", systemImage: "lock.fill")
+                        .font(.system(size: 13))
+                }
+                if (viewModel.preferences.movementFocusActionEnabled ?? false) {
+                    intervalSlider(
+                        value: Binding(
+                            get: { Double(viewModel.preferences.movementFocusMinSeconds ?? 30) },
+                            set: { viewModel.preferences.movementFocusMinSeconds = Int($0) }
+                        ),
+                        range: 10...100,
+                        step: 5,
+                        tint: .green,
+                        label: "Min countdown",
+                        unit: "sec"
+                    )
+                }
+            } header: {
+                Text("Focus action")
+                    .settingsSectionHeader()
+            } footer: {
+                Text("When on, buttons stay disabled until the countdown (seconds) finishes.")
                     .settingsSectionFooter()
             }
             Section {
@@ -663,13 +744,6 @@ struct SettingsView: View {
                         Text("Tiếng Việt").tag(UserPreferences.Language.vi)
                     }
                     .labelsHidden()
-                }
-                LabeledContent {
-                    Toggle("", isOn: $viewModel.preferences.minimalMode)
-                        .labelsHidden()
-                } label: {
-                    Label("Minimal mode", systemImage: "minus.circle")
-                        .font(.system(size: 13))
                 }
             } header: {
                 Text("App")

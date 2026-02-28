@@ -17,6 +17,10 @@ struct ReminderStyleView: View {
     var progress: Double
     var primaryButton: (title: String, action: () -> Void)
     var secondaryButton: (title: String, action: () -> Void)?
+    /// When true (e.g. focus action), primary button is disabled and not tappable.
+    var primaryButtonDisabled: Bool = false
+    /// When true (e.g. focus action), secondary button is disabled and not tappable.
+    var secondaryButtonDisabled: Bool = false
 
     @State private var opacity: Double = 0
     @State private var scale: CGFloat = 0.92
@@ -37,7 +41,9 @@ struct ReminderStyleView: View {
                     breathingScale: breathingScale,
                     blurRadius: blurRadius,
                     primaryButton: primaryButton,
-                    secondaryButton: secondaryButton
+                    secondaryButton: secondaryButton,
+                    primaryButtonDisabled: primaryButtonDisabled,
+                    secondaryButtonDisabled: secondaryButtonDisabled
                 )
             case .minimal:
                 MinimalReminderStyleView(
@@ -48,7 +54,9 @@ struct ReminderStyleView: View {
                     opacity: opacity,
                     scale: scale,
                     primaryButton: primaryButton,
-                    secondaryButton: secondaryButton
+                    secondaryButton: secondaryButton,
+                    primaryButtonDisabled: primaryButtonDisabled,
+                    secondaryButtonDisabled: secondaryButtonDisabled
                 )
             case .bold:
                 BoldReminderStyleView(
@@ -60,7 +68,9 @@ struct ReminderStyleView: View {
                     scale: scale,
                     breathingScale: breathingScale,
                     primaryButton: primaryButton,
-                    secondaryButton: secondaryButton
+                    secondaryButton: secondaryButton,
+                    primaryButtonDisabled: primaryButtonDisabled,
+                    secondaryButtonDisabled: secondaryButtonDisabled
                 )
             }
         }
@@ -92,6 +102,8 @@ private struct ModernReminderStyleView: View {
     let blurRadius: CGFloat
     let primaryButton: (title: String, action: () -> Void)
     let secondaryButton: (title: String, action: () -> Void)?
+    let primaryButtonDisabled: Bool
+    let secondaryButtonDisabled: Bool
 
     @State private var iconOffset: CGFloat = 0
 
@@ -267,6 +279,8 @@ private struct ModernReminderStyleView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .disabled(secondaryButtonDisabled)
+                .opacity(secondaryButtonDisabled ? 0.5 : 1)
             }
             Button(action: primaryButton.action) {
                 HStack(spacing: 8) {
@@ -285,6 +299,8 @@ private struct ModernReminderStyleView: View {
                 )
             }
             .buttonStyle(.plain)
+            .disabled(primaryButtonDisabled)
+            .opacity(primaryButtonDisabled ? 0.5 : 1)
         }
     }
 
@@ -317,6 +333,8 @@ private struct MinimalReminderStyleView: View {
     let scale: CGFloat
     let primaryButton: (title: String, action: () -> Void)
     let secondaryButton: (title: String, action: () -> Void)?
+    let primaryButtonDisabled: Bool
+    let secondaryButtonDisabled: Bool
 
     var body: some View {
         ZStack {
@@ -382,6 +400,8 @@ private struct MinimalReminderStyleView: View {
                                 )
                         }
                         .buttonStyle(.plain)
+                        .disabled(secondaryButtonDisabled)
+                        .opacity(secondaryButtonDisabled ? 0.5 : 1)
                     }
                     Button(action: primaryButton.action) {
                         Text(primaryButton.title)
@@ -392,6 +412,8 @@ private struct MinimalReminderStyleView: View {
                             .background(Capsule().fill(primaryColor))
                     }
                     .buttonStyle(.plain)
+                    .disabled(primaryButtonDisabled)
+                    .opacity(primaryButtonDisabled ? 0.5 : 1)
                 }
                 shortcutHint
                 Spacer().frame(height: 32)
@@ -430,6 +452,8 @@ private struct BoldReminderStyleView: View {
     let breathingScale: CGFloat
     let primaryButton: (title: String, action: () -> Void)
     let secondaryButton: (title: String, action: () -> Void)?
+    let primaryButtonDisabled: Bool
+    let secondaryButtonDisabled: Bool
 
     @State private var iconRotation: Double = 0
     @State private var iconVerticalOffset: CGFloat = 0
@@ -528,6 +552,8 @@ private struct BoldReminderStyleView: View {
                             .background(Capsule().fill(Color.white.opacity(0.9)))
                         }
                         .buttonStyle(.plain)
+                        .disabled(secondaryButtonDisabled)
+                        .opacity(secondaryButtonDisabled ? 0.5 : 1)
                     }
                     Button(action: primaryButton.action) {
                         HStack(spacing: 8) {
@@ -544,6 +570,8 @@ private struct BoldReminderStyleView: View {
                         .shadow(color: .black.opacity(0.25), radius: 12, x: 0, y: 6)
                     }
                     .buttonStyle(.plain)
+                    .disabled(primaryButtonDisabled)
+                    .opacity(primaryButtonDisabled ? 0.5 : 1)
                 }
 
                 shortcutHint

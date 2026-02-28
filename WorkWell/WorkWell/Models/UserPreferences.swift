@@ -78,6 +78,18 @@ struct UserPreferences: Codable, Equatable {
     /// When true, show full-screen reminder when a notification fires; when false, only system notification (nil = true for backward compat).
     var fullScreenReminderEnabled: Bool?
 
+    // MARK: - Focus action (per reminder: when on, buttons disabled until condition)
+    /// When true, water reminder requires waiting min countdown before allowing I drank / Skip.
+    var waterFocusActionEnabled: Bool?
+    /// Seconds to wait when focus is on before enabling water reminder buttons (10–100).
+    var waterFocusMinSeconds: Int?
+    /// When true, eye rest reminder requires waiting full countdown before allowing Skip.
+    var eyeRestFocusActionEnabled: Bool?
+    /// When true, movement reminder requires waiting min countdown before allowing Done / In a meeting.
+    var movementFocusActionEnabled: Bool?
+    /// Seconds to wait when focus is on before enabling movement reminder buttons (10–100).
+    var movementFocusMinSeconds: Int?
+
     // MARK: - Water
     var weightKg: Double
     var gender: Gender?
@@ -196,6 +208,11 @@ struct UserPreferences: Codable, Equatable {
             notificationHaptic: false,
             snoozeMinutes: 5,
             fullScreenReminderEnabled: true, // optional in struct for backward compat; default true
+            waterFocusActionEnabled: false,
+            waterFocusMinSeconds: 30,
+            eyeRestFocusActionEnabled: false,
+            movementFocusActionEnabled: false,
+            movementFocusMinSeconds: 30,
             weightKg: 60,
             gender: nil,
             waterGoalMlOverride: nil,

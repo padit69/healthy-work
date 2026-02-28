@@ -8,31 +8,73 @@ import SwiftData
 
 struct MovementReminderFullScreenView: View {
     var onDismiss: () -> Void
+    var setFocusBlocksKeyDismiss: ((Bool) -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
     private var preferences: UserPreferences { PreferencesService.load() }
     private var displayStyle: ReminderDisplayStyle { preferences.reminderDisplayStyle }
     private var primaryColor: Color { ReminderType.movement.primaryColor(overrideHex: preferences.reminderPrimaryColorHex(for: .movement)) }
+    private var focusEnabled: Bool { preferences.movementFocusActionEnabled ?? false }
+    private var focusMinSeconds: Int { min(100, max(10, preferences.movementFocusMinSeconds ?? 30)) }
+
+    @State private var focusCountdownRemaining: Int = 0
+    @State private var focusCountdownTotal: Int = 0
+    @State private var isFocusCounting: Bool = false
+    @State private var focusTimer: Timer?
 
     var body: some View {
         ReminderStyleView(
             displayStyle: displayStyle,
             type: .movement,
             primaryColor: primaryColor,
-            countdown: nil,
-            progress: 0,
+            countdown: focusEnabled && isFocusCounting ? focusCountdownRemaining : nil,
+            progress: focusEnabled && focusCountdownTotal > 0 ? Double(focusCountdownRemaining) / Double(focusCountdownTotal) : 0,
             primaryButton: ("Done".localizedByKey, handleDone),
-            secondaryButton: ("In a meeting".localizedByKey, handleInMeeting)
+            secondaryButton: ("In a meeting".localizedByKey, handleInMeeting),
+            primaryButtonDisabled: focusEnabled && isFocusCounting,
+            secondaryButtonDisabled: focusEnabled && isFocusCounting
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // Shortcuts: Return = primary (Done), Space = secondary (In a meeting)
+        .onAppear {
+            if focusEnabled {
+                startFocusCountdown()
+                setFocusBlocksKeyDismiss?(true)
+            } else {
+                setFocusBlocksKeyDismiss?(false)
+            }
+        }
+        .onDisappear {
+            focusTimer?.invalidate()
+            setFocusBlocksKeyDismiss?(false)
+        }
         .onKeyPress(.return) {
-            handleDone()
+            if !(focusEnabled && isFocusCounting) { handleDone() }
             return .handled
         }
         .onKeyPress(.space) {
-            handleInMeeting()
+            if !(focusEnabled && isFocusCounting) { handleInMeeting() }
             return .handled
         }
+    }
+
+    private func startFocusCountdown() {
+        let total = focusMinSeconds
+        focusCountdownTotal = total
+        focusCountdownRemaining = total
+        isFocusCounting = true
+        focusTimer?.invalidate()
+        focusTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            DispatchQueue.main.async {
+                if focusCountdownRemaining > 0 {
+                    focusCountdownRemaining -= 1
+                } else {
+                    focusTimer?.invalidate()
+                    focusTimer = nil
+                    isFocusCounting = false
+                    setFocusBlocksKeyDismiss?(false)
+                }
+            }
+        }
+        focusTimer?.tolerance = 0.2
     }
 
     private func handleDone() {

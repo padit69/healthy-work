@@ -91,7 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     @objc private func handleWakeFromSleep(_ notification: Notification) {
         DispatchQueue.main.async { [weak self] in
-            self?.lastTickDate = Date()
+            self?.lastTickDate = nil
         }
     }
 
@@ -186,6 +186,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         context: ModelContext,
         coordinator: ReminderCoordinator
     ) -> Bool {
+        if coordinator.focusActionBlocksKeyDismiss {
+            return false
+        }
         // 36: Return, 76: Keypad Enter, 49: Space
         let enterKeyCodes: Set<UInt16> = [36, 76]
         let spaceKeyCode: UInt16 = 49
@@ -383,9 +386,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         let inWorkHours = now >= workStart && now <= workEnd
 
         // Compute how many seconds have actually passed since last tick.
+        // Cap elapsed so that when Mac was sleeping we don't subtract the whole sleep duration
+        // (timer may fire before didWakeNotification, so lastTickDate can still be pre-sleep).
         let elapsedSeconds: Int
         if let last = lastTickDate {
-            elapsedSeconds = max(1, Int(now.timeIntervalSince(last)))
+            let raw = max(1, Int(now.timeIntervalSince(last)))
+            elapsedSeconds = min(raw, 3)
         } else {
             elapsedSeconds = 1
         }

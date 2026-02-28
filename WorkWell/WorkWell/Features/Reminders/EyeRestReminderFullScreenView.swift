@@ -8,6 +8,7 @@ import SwiftData
 
 struct EyeRestReminderFullScreenView: View {
     var onDismiss: () -> Void
+    var setFocusBlocksKeyDismiss: ((Bool) -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
     @State private var remainingSeconds: Int = 20
     @State private var isCounting = false
@@ -17,6 +18,8 @@ struct EyeRestReminderFullScreenView: View {
     private var countdownSeconds: Int { preferences.eyeRestCountdownSeconds }
     private var displayStyle: ReminderDisplayStyle { preferences.reminderDisplayStyle }
     private var primaryColor: Color { ReminderType.eyeRest.primaryColor(overrideHex: preferences.reminderPrimaryColorHex(for: .eyeRest)) }
+    /// When true, Skip is disabled until full countdown finishes (focus action).
+    private var focusEnabled: Bool { preferences.eyeRestFocusActionEnabled ?? false }
     private var progress: Double {
         guard countdownSeconds > 0 else { return 0 }
         return isCounting
@@ -31,8 +34,16 @@ struct EyeRestReminderFullScreenView: View {
                 if !isCounting {
                     startCountdown()
                 }
+                if focusEnabled {
+                    setFocusBlocksKeyDismiss?(true)
+                } else {
+                    setFocusBlocksKeyDismiss?(false)
+                }
             }
-            .onDisappear { timer?.invalidate() }
+            .onDisappear {
+                timer?.invalidate()
+                setFocusBlocksKeyDismiss?(false)
+            }
             // Enter / Space / Esc are handled in AppDelegate (NSEvent monitor) so they work reliably.
     }
 
@@ -46,7 +57,9 @@ struct EyeRestReminderFullScreenView: View {
                 countdown: remainingSeconds,
                 progress: progress,
                 primaryButton: ("str_button_skip".localizedByKey, skipAndDismiss),
-                secondaryButton: nil
+                secondaryButton: nil,
+                primaryButtonDisabled: focusEnabled && isCounting,
+                secondaryButtonDisabled: false
             )
         } else {
             ReminderStyleView(
@@ -56,7 +69,9 @@ struct EyeRestReminderFullScreenView: View {
                 countdown: countdownSeconds,
                 progress: progress,
                 primaryButton: ("str_button_skip".localizedByKey, skipAndDismiss),
-                secondaryButton: nil
+                secondaryButton: nil,
+                primaryButtonDisabled: false,
+                secondaryButtonDisabled: false
             )
         }
     }
@@ -78,6 +93,7 @@ struct EyeRestReminderFullScreenView: View {
                     timer?.invalidate()
                     timer = nil
                     isCounting = false
+                    setFocusBlocksKeyDismiss?(false)
                     StatsService.logReminder(type: .eyeRest, completed: true, context: modelContext)
                     onDismiss()
                 }

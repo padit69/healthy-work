@@ -17,11 +17,20 @@ struct FullScreenReminderWindowContent: View {
         Group {
             switch type {
             case .water:
-                WaterReminderFullScreenView(onDismiss: { coordinator.dismiss() })
+                WaterReminderFullScreenView(
+                    onDismiss: { coordinator.dismiss() },
+                    setFocusBlocksKeyDismiss: { coordinator.focusActionBlocksKeyDismiss = $0 }
+                )
             case .eyeRest:
-                EyeRestReminderFullScreenView(onDismiss: { coordinator.dismiss() })
+                EyeRestReminderFullScreenView(
+                    onDismiss: { coordinator.dismiss() },
+                    setFocusBlocksKeyDismiss: { coordinator.focusActionBlocksKeyDismiss = $0 }
+                )
             case .movement:
-                MovementReminderFullScreenView(onDismiss: { coordinator.dismiss() })
+                MovementReminderFullScreenView(
+                    onDismiss: { coordinator.dismiss() },
+                    setFocusBlocksKeyDismiss: { coordinator.focusActionBlocksKeyDismiss = $0 }
+                )
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -86,11 +95,20 @@ struct FullScreenReminderOverlay: View {
         Group {
             switch type {
             case .water:
-                WaterReminderFullScreenView(onDismiss: { coordinator.dismiss() })
+                WaterReminderFullScreenView(
+                    onDismiss: { coordinator.dismiss() },
+                    setFocusBlocksKeyDismiss: { coordinator.focusActionBlocksKeyDismiss = $0 }
+                )
             case .eyeRest:
-                EyeRestReminderFullScreenView(onDismiss: { coordinator.dismiss() })
+                EyeRestReminderFullScreenView(
+                    onDismiss: { coordinator.dismiss() },
+                    setFocusBlocksKeyDismiss: { coordinator.focusActionBlocksKeyDismiss = $0 }
+                )
             case .movement:
-                MovementReminderFullScreenView(onDismiss: { coordinator.dismiss() })
+                MovementReminderFullScreenView(
+                    onDismiss: { coordinator.dismiss() },
+                    setFocusBlocksKeyDismiss: { coordinator.focusActionBlocksKeyDismiss = $0 }
+                )
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -14,18 +14,23 @@ extension Notification.Name {
 final class ReminderCoordinator {
     var activeReminder: ReminderType?
 
+    /// When true, Enter/Space must not dismiss (focus action countdown still running). Set by full-screen reminder views.
+    var focusActionBlocksKeyDismiss: Bool = false
+
     /// Called when a reminder should be shown (e.g. open full-screen window).
     var onShowReminder: ((ReminderType) -> Void)?
     /// Called when reminder is dismissed so the window can be closed.
     var onDismissWindow: (() -> Void)?
 
     func show(_ type: ReminderType) {
+        focusActionBlocksKeyDismiss = false
         activeReminder = type
         onShowReminder?(type)
         NotificationCenter.default.post(name: .showReminder, object: nil, userInfo: ["type": type.rawValue])
     }
 
     func dismiss() {
+        focusActionBlocksKeyDismiss = false
         activeReminder = nil
         onDismissWindow?()
         onDismissWindow = nil
