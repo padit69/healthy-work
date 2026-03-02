@@ -436,9 +436,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                     }
                 }
                 remaining = intervalSeconds
-                
-            } else {
-                remaining -= 1
             }
 
             secondsRemainingPerType[type] = remaining
