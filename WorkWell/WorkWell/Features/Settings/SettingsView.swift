@@ -745,11 +745,22 @@ struct SettingsView: View {
                     }
                     .labelsHidden()
                 }
+                LabeledContent("Start at login") {
+                    Toggle(
+                        "",
+                        isOn: Binding(
+                            get: { viewModel.startAtLogin },
+                            set: { newValue in viewModel.setStartAtLogin(newValue) }
+                        )
+                    )
+                    .labelsHidden()
+                    .disabled(!viewModel.isStartAtLoginAvailable)
+                }
             } header: {
                 Text("App")
                     .settingsSectionHeader()
             } footer: {
-                Text("Theme, language and minimal mode apply to the whole app.")
+                Text("Theme, language, startup, and minimal mode apply to the whole app.")
                     .settingsSectionFooter()
             }
         }
