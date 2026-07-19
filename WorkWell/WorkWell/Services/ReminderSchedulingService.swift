@@ -4,7 +4,8 @@
 //
 
 import Foundation
-import UserNotifications
+@preconcurrency import UserNotifications
+import os
 
 /// A concrete reminder occurrence shared by the menu countdown, the in-app timer,
 /// and the macOS notification scheduler.
@@ -82,7 +83,7 @@ enum ReminderSchedulingService {
 
                 let regularIDs = pendingRequests
                     .map(\.identifier)
-                    .filter { $0.hasPrefix(regularIdentifierPrefix) }
+                    .filter(isRegularNotificationIdentifier)
                 if !regularIDs.isEmpty {
                     center.removePendingNotificationRequests(withIdentifiers: regularIDs)
                 }
@@ -101,7 +102,7 @@ enum ReminderSchedulingService {
                 for occurrence in occurrences {
                     center.add(notificationRequest(for: occurrence, preferences: preferences)) { error in
                         if let error {
-                            AppLogger.error("Unable to schedule reminder \(occurrence.identifier): \(error.localizedDescription)")
+                            Logger.general.error("Unable to schedule reminder: \(error.localizedDescription, privacy: .public)")
                         }
                     }
                 }
@@ -120,11 +121,7 @@ enum ReminderSchedulingService {
             "isSnooze": occurrence.isSnooze
         ]
 
-        var components = Calendar.current.dateComponents(
-            [.calendar, .timeZone, .year, .month, .day, .hour, .minute, .second],
-            from: occurrence.date
-        )
-        components.nanosecond = nil
+        let components = notificationDateComponents(for: occurrence.date)
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         return UNNotificationRequest(
             identifier: occurrence.identifier,
@@ -178,7 +175,7 @@ enum ReminderSchedulingService {
                 notificationRequest(for: occurrence, preferences: preferences)
             ) { error in
                 if let error {
-                    AppLogger.error("Unable to schedule snooze \(occurrenceID): \(error.localizedDescription)")
+                    Logger.general.error("Unable to schedule snooze: \(error.localizedDescription, privacy: .public)")
                 }
             }
         }
@@ -329,8 +326,8 @@ enum ReminderSchedulingService {
         preferences: UserPreferences,
         from now: Date = Date()
     ) -> ScheduledReminderOccurrence? {
-        let horizon = Calendar.current.date(byAdding: .day, value: 8, to: now)
-            ?? now.addingTimeInterval(8 * 24 * 60 * 60)
+        let horizon = Calendar.current.date(byAdding: .day, value: 2, to: now)
+            ?? now.addingTimeInterval(2 * 24 * 60 * 60)
         let regular = regularOccurrences(preferences: preferences, after: now, through: horizon)
             .first { $0.type == type }
         let snooze = loadStoredSnoozes(referenceDate: now)
@@ -373,6 +370,15 @@ enum ReminderSchedulingService {
 
     static func regularIdentifier(for type: ReminderType, date: Date) -> String {
         "\(regularIdentifierPrefix)\(type.rawValue).\(Int(date.timeIntervalSince1970.rounded()))"
+    }
+
+    static func notificationDateComponents(for date: Date) -> DateComponents {
+        var components = Calendar.current.dateComponents(
+            [.calendar, .timeZone, .year, .month, .day, .hour, .minute, .second],
+            from: date
+        )
+        components.nanosecond = nil
+        return components
     }
 
     private static func enabledIntervalMinutes(
@@ -444,5 +450,15 @@ enum ReminderSchedulingService {
         case .eyeRest: return 1
         case .movement: return 2
         }
+    }
+
+    nonisolated private static func isRegularNotificationIdentifier(_ identifier: String) -> Bool {
+        if identifier.hasPrefix("regular.") { return true }
+
+        // Remove requests created by versions that used water-0 / eye-0 /
+        // movement-0 identifiers, without touching UUID-based snoozes.
+        let parts = identifier.split(separator: "-", omittingEmptySubsequences: false)
+        guard parts.count == 2, Int(parts[1]) != nil else { return false }
+        return parts[0] == "water" || parts[0] == "eye" || parts[0] == "movement"
     }
 }

@@ -5,10 +5,6 @@
 
 import Foundation
 
-extension Notification.Name {
-    static let showReminder = Notification.Name("ShowReminder")
-}
-
 /// Coordinates which full-screen reminder is currently shown. Updated by notification delegate or from Settings "Test".
 @Observable
 final class ReminderCoordinator {
@@ -26,7 +22,6 @@ final class ReminderCoordinator {
         focusActionBlocksKeyDismiss = false
         activeReminder = type
         onShowReminder?(type)
-        NotificationCenter.default.post(name: .showReminder, object: nil, userInfo: ["type": type.rawValue])
     }
 
     func dismiss() {

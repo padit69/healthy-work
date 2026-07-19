@@ -225,11 +225,48 @@ struct SettingsView: View {
             Section {
                 DatePicker("Work start", selection: $viewModel.preferences.workStartTime, displayedComponents: .hourAndMinute)
                 DatePicker("Work end", selection: $viewModel.preferences.workEndTime, displayedComponents: .hourAndMinute)
+                Toggle(
+                    "Lunch break",
+                    isOn: Binding(
+                        get: {
+                            viewModel.preferences.lunchStartTime != nil
+                                && viewModel.preferences.lunchEndTime != nil
+                        },
+                        set: { enabled in
+                            if enabled {
+                                viewModel.preferences.lunchStartTime = UserPreferences.defaultLunchStart
+                                viewModel.preferences.lunchEndTime = UserPreferences.defaultLunchEnd
+                            } else {
+                                viewModel.preferences.lunchStartTime = nil
+                                viewModel.preferences.lunchEndTime = nil
+                            }
+                        }
+                    )
+                )
+                if viewModel.preferences.lunchStartTime != nil,
+                   viewModel.preferences.lunchEndTime != nil {
+                    DatePicker(
+                        "Lunch start",
+                        selection: Binding(
+                            get: { viewModel.preferences.lunchStartTime ?? UserPreferences.defaultLunchStart },
+                            set: { viewModel.preferences.lunchStartTime = $0 }
+                        ),
+                        displayedComponents: .hourAndMinute
+                    )
+                    DatePicker(
+                        "Lunch end",
+                        selection: Binding(
+                            get: { viewModel.preferences.lunchEndTime ?? UserPreferences.defaultLunchEnd },
+                            set: { viewModel.preferences.lunchEndTime = $0 }
+                        ),
+                        displayedComponents: .hourAndMinute
+                    )
+                }
             } header: {
                 Text("Work Hours")
                     .settingsSectionHeader()
             } footer: {
-                Text("Reminders only trigger inside this working window.")
+                Text("Reminders only trigger inside this working window and pause for lunch. An end time earlier than the start time creates an overnight schedule.")
                     .settingsSectionFooter()
             }
         }

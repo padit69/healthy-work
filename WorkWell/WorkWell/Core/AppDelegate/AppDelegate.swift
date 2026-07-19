@@ -9,6 +9,11 @@ import SwiftData
 import UserNotifications
 
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    private struct ReminderPresentationRequest: Equatable {
+        let identifier: String
+        let type: ReminderType
+    }
+
     private var statusItem: NSStatusItem?
     private var statusMenu: NSMenu?
     private var nextRemindersHeaderItem: NSMenuItem?
@@ -27,7 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         didSet {
             reminderCoordinator?.onShowReminder = { [weak self] type in
                 Task { @MainActor in
-                    self?.showFullScreenReminder(type)
+                    self?.handleCoordinatorShow(type)
                 }
             }
         }
@@ -43,10 +48,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private var fullScreenReminderWindow: NSWindow?
     private var escapeKeyMonitor: Any?
 
-    /// Countdown seconds per reminder type (drives auto full-screen reminders).
-    private var secondsRemainingPerType: [ReminderType: Int] = [:]
-    /// Last time we ticked countdowns. Reset on wake so countdown does not advance while system is sleeping.
-    private var lastTickDate: Date?
+    private var queuedPresentations: [ReminderPresentationRequest] = []
+    private var currentPresentation: ReminderPresentationRequest?
+    private var recentlyPresented: [String: Date] = [:]
+    private var lastScheduleEvaluationDate: Date?
+    private var lastNotificationRefreshDate: Date?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
@@ -56,18 +62,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         // Ask for notification permission and schedule all pending reminders at launch,
         // so the user doesn't have to open Settings to start the schedule.
         let preferences = PreferencesService.load()
-        ReminderSchedulingService.requestAuthorization { _ in
-            ReminderSchedulingService.rescheduleAll(preferences: preferences)
+        ReminderSchedulingService.requestAuthorization { [weak self] _ in
+            self?.refreshSystemSchedule(preferences: preferences, now: Date(), force: true)
         }
 
         NotificationCenter.default.addObserver(
             self,
-            selector: #selector(handleShowReminderNotification(_:)),
-            name: .showReminder,
+            selector: #selector(handleReminderScheduleChanged(_:)),
+            name: .reminderScheduleChanged,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleClockOrTimeZoneChanged(_:)),
+            name: .NSSystemClockDidChange,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleClockOrTimeZoneChanged(_:)),
+            name: .NSSystemTimeZoneDidChange,
             object: nil
         )
 
-        // Khi Mac wake từ sleep: reset lastTickDate để countdown không trừ cả thời gian ngủ.
+        // On wake, start evaluation from the current instant so missed reminders
+        // are left to macOS instead of being replayed as a burst of overlays.
         NSWorkspace.shared.notificationCenter.addObserver(
             self,
             selector: #selector(handleWakeFromSleep(_:)),
@@ -78,16 +97,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     @objc private func handleWakeFromSleep(_ notification: Notification) {
         DispatchQueue.main.async { [weak self] in
-            self?.lastTickDate = nil
+            guard let self else { return }
+            let now = Date()
+            self.lastScheduleEvaluationDate = now
+            self.refreshSystemSchedule(
+                preferences: PreferencesService.load(),
+                now: now,
+                force: true
+            )
         }
     }
 
-    @objc private func handleShowReminderNotification(_ notification: Notification) {
-        guard let raw = notification.userInfo?["type"] as? String,
-              let type = ReminderType(rawValue: raw) else { return }
+    @objc private func handleReminderScheduleChanged(_ notification: Notification) {
         DispatchQueue.main.async { [weak self] in
-            self?.showFullScreenReminder(type)
+            guard let self else { return }
+            let now = Date()
+            self.lastScheduleEvaluationDate = now
+            self.lastNotificationRefreshDate = now
         }
+    }
+
+    @objc private func handleClockOrTimeZoneChanged(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let now = Date()
+            self.lastScheduleEvaluationDate = now
+            self.refreshSystemSchedule(
+                preferences: PreferencesService.load(),
+                now: now,
+                force: true
+            )
+        }
+    }
+
+    @MainActor
+    private func handleCoordinatorShow(_ type: ReminderType) {
+        if currentPresentation == nil {
+            currentPresentation = ReminderPresentationRequest(
+                identifier: "preview.\(type.rawValue).\(UUID().uuidString)",
+                type: type
+            )
+        }
+        showFullScreenReminder(type)
     }
     
     @MainActor
@@ -98,12 +149,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         mainWindow?.orderOut(nil)
         let container = modelContainer ?? AppDelegate.sharedModelContainer
         let coordinator = reminderCoordinator ?? AppDelegate.sharedCoordinator
-        guard let container = container else { return }
-        guard let coordinator = coordinator else { return }
-        guard let screen = NSScreen.main else { return }
+        guard let container,
+              let coordinator,
+              let screen = NSScreen.main else {
+            currentPresentation = nil
+            DispatchQueue.main.async { [weak self] in
+                self?.presentNextQueuedReminder()
+            }
+            return
+        }
 
         coordinator.onDismissWindow = { [weak self] in
-            self?.closeFullScreenReminderWindow()
+            guard let self else { return }
+            self.closeFullScreenReminderWindow()
+            self.currentPresentation = nil
+            DispatchQueue.main.async { [weak self] in
+                self?.presentNextQueuedReminder()
+            }
         }
 
         let window = NSWindow(
@@ -164,6 +226,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         }
         fullScreenReminderWindow?.orderOut(nil)
         fullScreenReminderWindow = nil
+    }
+
+    @MainActor
+    private func requestFullScreenPresentation(
+        type: ReminderType,
+        identifier: String,
+        preferences: UserPreferences
+    ) {
+        guard preferences.fullScreenReminderEnabled ?? true else { return }
+
+        let now = Date()
+        recentlyPresented = recentlyPresented.filter { now.timeIntervalSince($0.value) < 10 }
+        if let lastPresented = recentlyPresented[identifier],
+           now.timeIntervalSince(lastPresented) < 5 {
+            return
+        }
+
+        let request = ReminderPresentationRequest(identifier: identifier, type: type)
+        guard currentPresentation != request,
+              currentPresentation?.type != type,
+              !queuedPresentations.contains(request),
+              !queuedPresentations.contains(where: { $0.type == type }) else { return }
+
+        if fullScreenReminderWindow != nil || currentPresentation != nil {
+            queuedPresentations.append(request)
+            return
+        }
+
+        guard let coordinator = reminderCoordinator ?? AppDelegate.sharedCoordinator else { return }
+        currentPresentation = request
+        recentlyPresented[identifier] = now
+        coordinator.show(type)
+    }
+
+    @MainActor
+    private func presentNextQueuedReminder() {
+        guard fullScreenReminderWindow == nil,
+              currentPresentation == nil,
+              !queuedPresentations.isEmpty else { return }
+
+        let next = queuedPresentations.removeFirst()
+        guard let coordinator = reminderCoordinator ?? AppDelegate.sharedCoordinator else { return }
+        currentPresentation = next
+        recentlyPresented[next.identifier] = Date()
+        coordinator.show(next.type)
     }
 
     /// Xử lý phím tắt Enter / Space cho các loại reminder full-screen.
@@ -254,18 +361,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         let prefs = PreferencesService.load()
-        let showFullScreen = prefs.fullScreenReminderEnabled ?? true
-        if showFullScreen {
-            let id = notification.request.content.categoryIdentifier
-            if id == ReminderSchedulingService.waterCategoryIdentifier {
-                reminderCoordinator?.show(.water)
-            } else if id == ReminderSchedulingService.eyeRestCategoryIdentifier {
-                reminderCoordinator?.show(.eyeRest)
-            } else if id == ReminderSchedulingService.movementCategoryIdentifier {
-                reminderCoordinator?.show(.movement)
-            }
+        handleDeliveredNotification(notification, preferences: prefs)
+
+        var options: UNNotificationPresentationOptions = []
+        if prefs.notificationBanner {
+            options.insert(.banner)
+            options.insert(.list)
         }
-        completionHandler([.banner, .sound])
+        if prefs.notificationSound {
+            options.insert(.sound)
+        }
+        completionHandler(options)
     }
 
     func userNotificationCenter(
@@ -274,18 +380,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let prefs = PreferencesService.load()
-        let showFullScreen = prefs.fullScreenReminderEnabled ?? true
-        if showFullScreen {
-            let id = response.notification.request.content.categoryIdentifier
-            if id == ReminderSchedulingService.waterCategoryIdentifier {
-                reminderCoordinator?.show(.water)
-            } else if id == ReminderSchedulingService.eyeRestCategoryIdentifier {
-                reminderCoordinator?.show(.eyeRest)
-            } else if id == ReminderSchedulingService.movementCategoryIdentifier {
-                reminderCoordinator?.show(.movement)
-            }
-        }
+        handleDeliveredNotification(response.notification, preferences: prefs)
         completionHandler()
+    }
+
+    private func handleDeliveredNotification(
+        _ notification: UNNotification,
+        preferences: UserPreferences
+    ) {
+        let category = notification.request.content.categoryIdentifier
+        guard let type = ReminderSchedulingService.reminderType(for: category) else { return }
+
+        let identifier = notification.request.content.userInfo["occurrenceID"] as? String
+            ?? notification.request.identifier
+        if notification.request.content.userInfo["isSnooze"] as? Bool == true {
+            ReminderSchedulingService.removeStoredSnooze(identifier: identifier)
+        }
+
+        requestFullScreenPresentation(type: type, identifier: identifier, preferences: preferences)
+        refreshSystemSchedule(preferences: preferences, now: Date(), force: false)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -346,7 +459,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         self.statusMenu = menu
     }
 
-    /// Start a 1s timer that updates the menu bar title and drives reminder countdowns.
+    /// Start a 1s timer that renders the shared absolute schedule and presents due reminders.
     private func startStatusCountdown() {
         countdownTimer?.invalidate()
         let timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
@@ -358,80 +471,77 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         updateStatusTitle()
     }
 
-    /// Tick internal reminder countdowns and trigger full-screen reminders when due.
-    private func tickInternalReminders(preferences: UserPreferences, now: Date) {
-        let (workStart, workEnd) = ReminderSchedulingService.workWindow(for: preferences, on: now)
-        let inWorkHours = now >= workStart && now <= workEnd
+    private func processDueReminders(preferences: UserPreferences, now: Date) {
+        defer { lastScheduleEvaluationDate = now }
+        guard let lastEvaluation = lastScheduleEvaluationDate else { return }
 
-        // Compute how many seconds have actually passed since last tick.
-        // Cap elapsed so that when Mac was sleeping we don't subtract the whole sleep duration
-        // (timer may fire before didWakeNotification, so lastTickDate can still be pre-sleep).
-        let elapsedSeconds: Int
-        if let last = lastTickDate {
-            let raw = max(1, Int(now.timeIntervalSince(last)))
-            elapsedSeconds = min(raw, 3)
-        } else {
-            elapsedSeconds = 1
+        let elapsed = now.timeIntervalSince(lastEvaluation)
+        guard elapsed >= 0 else { return }
+        // A long gap is normally sleep. macOS owns delivery of notifications that
+        // became due during that gap; do not flood the user with catch-up overlays.
+        guard elapsed <= 60 else { return }
+
+        var due = ReminderSchedulingService.regularOccurrences(
+            preferences: preferences,
+            after: lastEvaluation,
+            through: now
+        )
+        due.append(contentsOf: ReminderSchedulingService.dueSnoozes(after: lastEvaluation, through: now))
+        due.sort { $0.date < $1.date }
+
+        for occurrence in due {
+            if occurrence.isSnooze {
+                ReminderSchedulingService.removeStoredSnooze(identifier: occurrence.identifier)
+            }
+            requestFullScreenPresentation(
+                type: occurrence.type,
+                identifier: occurrence.identifier,
+                preferences: preferences
+            )
         }
-        lastTickDate = now
 
-        for type in [ReminderType.water, ReminderType.eyeRest, ReminderType.movement] {
-            let enabled: Bool
-            let intervalMinutes: Int
-
-            switch type {
-            case .water:
-                enabled = preferences.waterReminderEnabled
-                intervalMinutes = preferences.waterReminderIntervalMinutes
-            case .eyeRest:
-                enabled = preferences.eyeReminderEnabled
-                intervalMinutes = preferences.eyeReminderIntervalMinutes
-            case .movement:
-                enabled = preferences.movementReminderEnabled
-                intervalMinutes = preferences.movementReminderIntervalMinutes
-            }
-
-            // Outside work hours or disabled → clear countdown.
-            guard enabled, intervalMinutes > 0, inWorkHours else {
-                secondsRemainingPerType[type] = nil
-                continue
-            }
-
-            let intervalSeconds = intervalMinutes * 60
-            var remaining = secondsRemainingPerType[type] ?? intervalSeconds
-
-            // Advance countdown by elapsed time since last tick. On wake from sleep we reset lastTickDate so this is ~1s only (countdown paused while sleeping).
-            remaining -= elapsedSeconds
-
-            if remaining <= 0 {
-                // Time's up: show reminder if no full-screen window is already visible.
-                // Use instance or static fallback so we can show even before main window is built.
-                let coordinator = reminderCoordinator ?? AppDelegate.sharedCoordinator
-                if fullScreenReminderWindow == nil, let coordinator = coordinator {
-                    DispatchQueue.main.async { [weak self] in
-                        guard self != nil else { return }
-                        coordinator.show(type)
-                    }
-                }
-                remaining = intervalSeconds
-            }
-
-            secondsRemainingPerType[type] = remaining
+        if !due.isEmpty {
+            refreshSystemSchedule(preferences: preferences, now: now, force: false)
         }
+    }
+
+    private func refreshSystemSchedule(
+        preferences: UserPreferences,
+        now: Date,
+        force: Bool
+    ) {
+        if !force,
+           let lastRefresh = lastNotificationRefreshDate,
+           now.timeIntervalSince(lastRefresh) < 10 * 60 {
+            return
+        }
+        lastNotificationRefreshDate = now
+        ReminderSchedulingService.rescheduleAll(preferences: preferences, now: now)
     }
 
     private func updateStatusTitle() {
         let preferences = PreferencesService.load()
         let now = Date()
 
-        // Update internal countdowns and show reminders when due.
-        tickInternalReminders(preferences: preferences, now: now)
+        processDueReminders(preferences: preferences, now: now)
+        refreshSystemSchedule(preferences: preferences, now: now, force: false)
 
         func timeRemaining(for type: ReminderType) -> Int? {
-            return secondsRemainingPerType[type]
+            guard let date = ReminderSchedulingService.nextScheduledDate(
+                for: type,
+                preferences: preferences,
+                from: now
+            ) else { return nil }
+            return max(0, Int(ceil(date.timeIntervalSince(now))))
         }
 
         func format(_ seconds: Int) -> String {
+            if seconds >= 3600 {
+                let hours = seconds / 3600
+                let minutes = (seconds % 3600) / 60
+                let secs = seconds % 60
+                return String(format: "%02d:%02d:%02d", hours, minutes, secs)
+            }
             let minutes = seconds / 60
             let secs = seconds % 60
             return String(format: "%02d:%02d", minutes, secs)

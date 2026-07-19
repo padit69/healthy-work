@@ -192,6 +192,18 @@ struct UserPreferences: Codable, Equatable {
         return c.date(from: DateComponents(hour: 17, minute: 0)) ?? Date()
     }()
 
+    static let defaultLunchStart: Date = {
+        var c = Calendar.current
+        c.timeZone = TimeZone.current
+        return c.date(from: DateComponents(hour: 12, minute: 0)) ?? Date()
+    }()
+
+    static let defaultLunchEnd: Date = {
+        var c = Calendar.current
+        c.timeZone = TimeZone.current
+        return c.date(from: DateComponents(hour: 13, minute: 0)) ?? Date()
+    }()
+
     static var `default`: UserPreferences {
         UserPreferences(
             workStartTime: defaultWorkStart,

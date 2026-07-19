@@ -66,9 +66,10 @@ struct WaterReminderFullScreenView: View {
         focusTimer?.invalidate()
         focusTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             DispatchQueue.main.async {
-                if focusCountdownRemaining > 0 {
+                if focusCountdownRemaining > 1 {
                     focusCountdownRemaining -= 1
                 } else {
+                    focusCountdownRemaining = 0
                     focusTimer?.invalidate()
                     focusTimer = nil
                     isFocusCounting = false

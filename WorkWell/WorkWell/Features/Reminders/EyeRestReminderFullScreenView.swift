@@ -89,9 +89,10 @@ struct EyeRestReminderFullScreenView: View {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             DispatchQueue.main.async {
-                if remainingSeconds > 0 {
+                if remainingSeconds > 1 {
                     remainingSeconds -= 1
                 } else {
+                    remainingSeconds = 0
                     timer?.invalidate()
                     timer = nil
                     isCounting = false
