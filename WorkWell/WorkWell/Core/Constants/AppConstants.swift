@@ -11,7 +11,7 @@ enum AppConstants {
 
     enum App {
         static let name = "WorkWell"
-        static let bundleIdentifier = "com.hihiteam.care.WorkWell"
+        static let bundleIdentifier = "com.hihiteam.working.care"
     }
 
     enum Layout {
@@ -19,9 +19,4 @@ enum AppConstants {
         static let navigationSplitIdealWidth: CGFloat = 200
     }
 
-    /// GitHub repo for update checks (owner/repo). Releases use tags v*.*.* and assets WorkWell-{tag}.dmg
-    enum Updates {
-        static let githubRepo = "padit69/work-well"
-        static let latestReleaseURL = "https://api.github.com/repos/\(githubRepo)/releases/latest"
-    }
 }

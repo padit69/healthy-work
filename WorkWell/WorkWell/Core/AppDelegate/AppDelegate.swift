@@ -8,16 +8,11 @@ import SwiftUI
 import SwiftData
 import UserNotifications
 
-extension Notification.Name {
-    static let checkForUpdatesRequested = Notification.Name("CheckForUpdatesRequested")
-}
-
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private var statusItem: NSStatusItem?
     private var statusMenu: NSMenu?
     private var nextRemindersHeaderItem: NSMenuItem?
     private var openSettingsMenuItem: NSMenuItem?
-    private var checkForUpdatesMenuItem: NSMenuItem?
     private var quitMenuItem: NSMenuItem?
     private var countdownTimer: Timer?
     private var waterCountdownItem: NSMenuItem?
@@ -47,7 +42,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     private var fullScreenReminderWindow: NSWindow?
     private var escapeKeyMonitor: Any?
-    private var updateAvailableWindow: NSWindow?
 
     /// Countdown seconds per reminder type (drives auto full-screen reminders).
     private var secondsRemainingPerType: [ReminderType: Int] = [:]
@@ -66,26 +60,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             ReminderSchedulingService.rescheduleAll(preferences: preferences)
         }
 
-        // Optional: check for updates on launch and show in-app window when a newer version is available.
-        if preferences.autoCheckForUpdates {
-            Task { @MainActor in
-                if let release = await UpdateCheckService.checkForUpdate() {
-                    self.showUpdateAvailableWindow(release: release)
-                }
-            }
-        }
-
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleShowReminderNotification(_:)),
             name: .showReminder,
-            object: nil
-        )
-
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleCheckForUpdatesRequested(_:)),
-            name: .checkForUpdatesRequested,
             object: nil
         )
 
@@ -355,15 +333,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         menu.addItem(openItem)
         openSettingsMenuItem = openItem
 
-        let checkUpdateItem = NSMenuItem(title: "Check for Updates".localizedByKey, action: #selector(checkForUpdates), keyEquivalent: "")
-        checkUpdateItem.target = self
-        if let checkUpdateImage = NSImage(systemSymbolName: "arrow.down.circle", accessibilityDescription: "Check for Updates") {
-            checkUpdateImage.isTemplate = true
-            checkUpdateItem.image = checkUpdateImage
-        }
-        menu.addItem(checkUpdateItem)
-        checkForUpdatesMenuItem = checkUpdateItem
-
         let quitItem = NSMenuItem(title: "Quit".localizedByKey, action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
         if let quitImage = NSImage(systemSymbolName: "rectangle.portrait.and.arrow.right", accessibilityDescription: "Quit") {
@@ -471,7 +440,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         // Keep menu bar labels in sync with current language
         nextRemindersHeaderItem?.title = "Next reminders".localizedByKey
         openSettingsMenuItem?.title = "Open Settings".localizedByKey
-        checkForUpdatesMenuItem?.title = "Check for Updates".localizedByKey
         quitMenuItem?.title = "Quit".localizedByKey
 
         let waterLabel = "Water".localizedByKey
@@ -513,54 +481,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     @objc private func quit() {
         NSApp.terminate(nil)
-    }
-
-    @objc private func handleCheckForUpdatesRequested(_ notification: Notification) {
-        checkForUpdates()
-    }
-
-    @objc private func checkForUpdates() {
-        Task { @MainActor in
-            guard let release = await UpdateCheckService.checkForUpdate() else {
-                let alert = NSAlert()
-                alert.messageText = "You're up to date".localizedByKey
-                alert.informativeText = "You have the latest version (\(UpdateCheckService.currentVersion))."
-                alert.alertStyle = .informational
-                alert.addButton(withTitle: "OK".localizedByKey)
-                NSApp.setActivationPolicy(.regular)
-                NSApp.activate(ignoringOtherApps: true)
-                alert.runModal()
-                return
-            }
-            showUpdateAvailableWindow(release: release)
-        }
-    }
-    
-
-    @MainActor
-    private func showUpdateAvailableWindow(release: GitHubRelease) {
-        updateAvailableWindow?.orderOut(nil)
-        updateAvailableWindow = nil
-
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-
-        let content = UpdateAvailableView(release: release) { [weak self] in
-            self?.updateAvailableWindow?.orderOut(nil)
-            self?.updateAvailableWindow = nil
-        }
-        let hosting = NSHostingView(rootView: content)
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 440, height: 280),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "\(AppConstants.App.name) — Update"
-        window.contentView = hosting
-        window.center()
-        window.isReleasedWhenClosed = false
-        updateAvailableWindow = window
-        window.makeKeyAndOrderFront(nil)
     }
 }
