@@ -12,8 +12,9 @@ enum StatsService {
 
     static func waterCountToday(context: ModelContext) -> Int {
         let today = calendar.startOfDay(for: Date())
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) ?? Date.distantFuture
         let predicate = #Predicate<WaterRecord> { record in
-            record.date >= today
+            record.date >= today && record.date < tomorrow
         }
         let descriptor = FetchDescriptor<WaterRecord>(predicate: predicate)
         guard let list = try? context.fetch(descriptor) else { return 0 }

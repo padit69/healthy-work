@@ -78,6 +78,7 @@ final class SettingsViewModel {
             || old.movementReminderIntervalMinutes != new.movementReminderIntervalMinutes
             || old.notificationBanner != new.notificationBanner
             || old.notificationSound != new.notificationSound
+            || old.eyeRestSilentMode != new.eyeRestSilentMode
     }
 
     func refreshStartAtLogin() {

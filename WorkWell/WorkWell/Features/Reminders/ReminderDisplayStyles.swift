@@ -13,6 +13,8 @@ struct ReminderStyleView: View {
     var type: ReminderType
     /// Primary/accent color for this reminder (from preferences or type default).
     var primaryColor: Color
+    var backgroundStyle: ReminderBackgroundStyle = .blur
+    var subtitleOverride: String? = nil
     var countdown: Int?
     var progress: Double
     var primaryButton: (title: String, action: () -> Void)
@@ -36,6 +38,8 @@ struct ReminderStyleView: View {
                 ModernReminderStyleView(
                     type: type,
                     primaryColor: primaryColor,
+                    backgroundStyle: backgroundStyle,
+                    subtitle: subtitleOverride ?? type.subtitle,
                     countdown: countdown,
                     progress: progress,
                     opacity: opacity,
@@ -52,6 +56,8 @@ struct ReminderStyleView: View {
                 MinimalReminderStyleView(
                     type: type,
                     primaryColor: primaryColor,
+                    backgroundStyle: backgroundStyle,
+                    subtitle: subtitleOverride ?? type.subtitle,
                     countdown: countdown,
                     progress: progress,
                     opacity: opacity,
@@ -66,6 +72,8 @@ struct ReminderStyleView: View {
                 BoldReminderStyleView(
                     type: type,
                     primaryColor: primaryColor,
+                    backgroundStyle: backgroundStyle,
+                    subtitle: subtitleOverride ?? type.subtitle,
                     countdown: countdown,
                     progress: progress,
                     opacity: opacity,
@@ -99,6 +107,8 @@ struct ReminderStyleView: View {
 private struct ModernReminderStyleView: View {
     let type: ReminderType
     let primaryColor: Color
+    let backgroundStyle: ReminderBackgroundStyle
+    let subtitle: String
     let countdown: Int?
     let progress: Double
     let opacity: Double
@@ -125,6 +135,7 @@ private struct ModernReminderStyleView: View {
             )
             .ignoresSafeArea()
             .blur(radius: blurRadius)
+            .opacity(backgroundStyle == .clear ? 0 : (backgroundStyle == .blur ? 0.72 : 0.22))
 
             VStack(spacing: 24) {
                 Spacer()
@@ -214,7 +225,7 @@ private struct ModernReminderStyleView: View {
                 .font(.system(size: 36, weight: .bold))
                 .foregroundColor(.white)
                 .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
-            Text(type.subtitle)
+            Text(subtitle)
                 .font(.system(size: 18, weight: .medium))
                 .foregroundColor(.white.opacity(0.9))
             Text(type.helper)
@@ -355,6 +366,8 @@ private struct ModernReminderStyleView: View {
 private struct MinimalReminderStyleView: View {
     let type: ReminderType
     let primaryColor: Color
+    let backgroundStyle: ReminderBackgroundStyle
+    let subtitle: String
     let countdown: Int?
     let progress: Double
     let opacity: Double
@@ -369,6 +382,7 @@ private struct MinimalReminderStyleView: View {
         ZStack {
             Color(red: 0.98, green: 0.97, blue: 0.95)
                 .ignoresSafeArea()
+                .opacity(backgroundStyle == .clear ? 0 : (backgroundStyle == .blur ? 0.78 : 0.18))
             RadialGradient(
                 colors: [Color.clear, Color.black.opacity(0.03)],
                 center: .center,
@@ -376,6 +390,7 @@ private struct MinimalReminderStyleView: View {
                 endRadius: 600
             )
             .ignoresSafeArea()
+            .opacity(backgroundStyle == .clear ? 0 : 1)
 
             VStack(spacing: 24) {
                 Spacer()
@@ -398,7 +413,7 @@ private struct MinimalReminderStyleView: View {
                     Text(type.title.localizedByKey)
                         .font(.system(size: 32, weight: .semibold))
                         .foregroundColor(Color(red: 0.2, green: 0.2, blue: 0.2))
-                    Text(type.subtitle.localizedByKey)
+                    Text(subtitle)
                         .font(.system(size: 17))
                         .foregroundColor(Color(red: 0.4, green: 0.4, blue: 0.4))
                         .multilineTextAlignment(.center)
@@ -492,6 +507,8 @@ private struct MinimalReminderStyleView: View {
 private struct BoldReminderStyleView: View {
     let type: ReminderType
     let primaryColor: Color
+    let backgroundStyle: ReminderBackgroundStyle
+    let subtitle: String
     let countdown: Int?
     let progress: Double
     let opacity: Double
@@ -510,6 +527,7 @@ private struct BoldReminderStyleView: View {
         ZStack {
             primaryColor.opacity(0.85)
                 .ignoresSafeArea()
+                .opacity(backgroundStyle == .clear ? 0 : (backgroundStyle == .blur ? 0.65 : 1))
             LinearGradient(
                 colors: [
                     primaryColor.opacity(0.7),
@@ -520,8 +538,10 @@ private struct BoldReminderStyleView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
+            .opacity(backgroundStyle == .clear ? 0 : (backgroundStyle == .blur ? 0.72 : 1))
             Color.black.opacity(0.1)
                 .ignoresSafeArea()
+                .opacity(backgroundStyle == .clear ? 0 : 1)
 
             VStack(spacing: 28) {
                 Spacer()
@@ -562,7 +582,7 @@ private struct BoldReminderStyleView: View {
                         .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 4)
                         .textCase(.uppercase)
                         .tracking(1)
-                    Text(type.subtitle)
+                    Text(subtitle)
                         .font(.system(size: 19, weight: .bold))
                         .foregroundColor(.white.opacity(0.95))
                 }

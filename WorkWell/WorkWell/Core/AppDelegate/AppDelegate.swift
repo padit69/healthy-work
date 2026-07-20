@@ -368,7 +368,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             options.insert(.banner)
             options.insert(.list)
         }
-        if prefs.notificationSound {
+        let type = ReminderSchedulingService.reminderType(
+            for: notification.request.content.categoryIdentifier
+        )
+        if type.map({ ReminderSchedulingService.shouldPlaySound(for: $0, preferences: prefs) })
+            ?? prefs.notificationSound {
             options.insert(.sound)
         }
         completionHandler(options)

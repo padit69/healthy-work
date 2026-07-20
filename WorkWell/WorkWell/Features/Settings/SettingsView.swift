@@ -177,6 +177,7 @@ struct SettingsView: View {
             // Dashboard-style overview for today
             Section {
                 let waterMl = WaterService.totalMl(for: Date(), in: modelContext)
+                let waterGoalMl = WaterService.dailyGoalMl(preferences: viewModel.preferences)
                 let waterGlasses = StatsService.waterCountToday(context: modelContext)
                 let eyeCount = StatsService.eyeRestCompletedToday(context: modelContext)
                 let moveCount = StatsService.movementCompletedToday(context: modelContext)
@@ -185,8 +186,14 @@ struct SettingsView: View {
                 HStack(spacing: 12) {
                     DashboardMetricCard(
                         title: "Water today",
-                        value: "\(waterMl) ml",
-                        subtitle: waterGlasses > 0 ? "\(waterGlasses) glasses" : "No logs yet",
+                        value: WaterService.formattedAmount(
+                            waterMl,
+                            unit: viewModel.preferences.waterUnit,
+                            locale: viewModel.preferences.language.locale
+                        ),
+                        subtitle: waterGlasses > 0
+                            ? "\(waterGlasses) glasses • \(WaterService.formattedAmount(waterGoalMl, unit: viewModel.preferences.waterUnit, locale: viewModel.preferences.language.locale)) goal"
+                            : "No logs yet",
                         systemImage: "drop.fill",
                         tint: .blue
                     )
@@ -377,13 +384,6 @@ struct SettingsView: View {
                         .font(.system(size: 13))
                 }
                 LabeledContent {
-                    Toggle("", isOn: $viewModel.preferences.notificationHaptic)
-                        .labelsHidden()
-                } label: {
-                    Label("Haptic", systemImage: "hand.tap.fill")
-                        .font(.system(size: 13))
-                }
-                LabeledContent {
                     Picker("", selection: $viewModel.preferences.snoozeMinutes) {
                         Text("5 min").tag(5)
                         Text("10 min").tag(10)
@@ -524,10 +524,38 @@ struct SettingsView: View {
                     }
                     .labelsHidden()
                 }
+                LabeledContent("Daily goal") {
+                    Text(
+                        WaterService.formattedAmount(
+                            WaterService.dailyGoalMl(preferences: viewModel.preferences),
+                            unit: viewModel.preferences.waterUnit,
+                            locale: viewModel.preferences.language.locale
+                        )
+                    )
+                    .foregroundStyle(.secondary)
+                }
+                LabeledContent {
+                    Toggle("", isOn: customWaterGoalEnabledBinding)
+                        .labelsHidden()
+                } label: {
+                    Label("Custom daily goal", systemImage: "target")
+                        .font(.system(size: 13))
+                }
+                if viewModel.preferences.waterGoalMlOverride != nil {
+                    LabeledContent("Custom amount") {
+                        HStack(spacing: 6) {
+                            TextField("", value: customWaterGoalDisplayBinding, format: .number)
+                                .frame(width: 72)
+                                .multilineTextAlignment(.trailing)
+                            Text(viewModel.preferences.waterUnit.localizedName)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
                 LabeledContent("Default glass") {
                     Picker("", selection: $viewModel.preferences.defaultGlassMl) {
-                        Text("200 ml").tag(200)
-                        Text("250 ml").tag(250)
+                        Text(WaterService.formattedAmount(200, unit: viewModel.preferences.waterUnit, locale: viewModel.preferences.language.locale)).tag(200)
+                        Text(WaterService.formattedAmount(250, unit: viewModel.preferences.waterUnit, locale: viewModel.preferences.language.locale)).tag(250)
                     }
                     .labelsHidden()
                 }
@@ -697,11 +725,20 @@ struct SettingsView: View {
                     Label("Random suggestion", systemImage: "shuffle")
                         .font(.system(size: 13))
                 }
+                ForEach(MovementExercise.allCases) { exercise in
+                    LabeledContent {
+                        Toggle("", isOn: movementExerciseBinding(exercise))
+                            .labelsHidden()
+                    } label: {
+                        Text(exercise.title)
+                            .font(.system(size: 13))
+                    }
+                }
             } header: {
                 Text("Movement")
                     .settingsSectionHeader()
             } footer: {
-                Text("Show a random stretch or movement suggestion each time.")
+                Text("Choose the movement suggestions that can appear. With Random off, the first selected exercise is used.")
                     .settingsSectionFooter()
             }
             Section {
@@ -765,7 +802,7 @@ struct SettingsView: View {
 
     private var appearanceContent: some View {
         Group {
-            // 1. App-wide: theme, language, minimal (đặt trước vì là cấu hình app)
+            // App-wide preferences.
             Section {
                 LabeledContent("Theme") {
                     Picker("", selection: $viewModel.preferences.appearance) {
@@ -797,10 +834,56 @@ struct SettingsView: View {
                 Text("App")
                     .settingsSectionHeader()
             } footer: {
-                Text("Theme, language, startup, and minimal mode apply to the whole app.")
+                Text("Theme, language, and startup apply to the whole app.")
                     .settingsSectionFooter()
             }
         }
+    }
+
+    private var customWaterGoalEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.preferences.waterGoalMlOverride != nil },
+            set: { enabled in
+                if enabled {
+                    let automaticGoal = WaterService.dailyGoalMl(preferences: viewModel.preferences)
+                    viewModel.preferences.waterGoalMlOverride = automaticGoal > 0 ? automaticGoal : 2_000
+                } else {
+                    viewModel.preferences.waterGoalMlOverride = nil
+                }
+            }
+        )
+    }
+
+    private var customWaterGoalDisplayBinding: Binding<Double> {
+        Binding(
+            get: {
+                WaterService.displayValue(
+                    forMl: viewModel.preferences.waterGoalMlOverride ?? 0,
+                    unit: viewModel.preferences.waterUnit
+                )
+            },
+            set: { value in
+                let amountMl = WaterService.milliliters(from: value, unit: viewModel.preferences.waterUnit)
+                if amountMl > 0 {
+                    viewModel.preferences.waterGoalMlOverride = amountMl
+                }
+            }
+        )
+    }
+
+    private func movementExerciseBinding(_ exercise: MovementExercise) -> Binding<Bool> {
+        Binding(
+            get: { viewModel.preferences.movementExercisesEnabled.contains(exercise.rawValue) },
+            set: { enabled in
+                if enabled {
+                    if !viewModel.preferences.movementExercisesEnabled.contains(exercise.rawValue) {
+                        viewModel.preferences.movementExercisesEnabled.append(exercise.rawValue)
+                    }
+                } else {
+                    viewModel.preferences.movementExercisesEnabled.removeAll { $0 == exercise.rawValue }
+                }
+            }
+        )
     }
 
     /// Two rows: Background + Primary color (used inside each reminder type section).

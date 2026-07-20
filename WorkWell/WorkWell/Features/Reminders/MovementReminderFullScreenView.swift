@@ -20,12 +20,15 @@ struct MovementReminderFullScreenView: View {
     @State private var focusCountdownTotal: Int = 0
     @State private var isFocusCounting: Bool = false
     @State private var focusTimer: Timer?
+    @State private var suggestion: String?
 
     var body: some View {
         ReminderStyleView(
             displayStyle: displayStyle,
             type: .movement,
             primaryColor: primaryColor,
+            backgroundStyle: preferences.reminderBackgroundStyle(for: .movement),
+            subtitleOverride: suggestion,
             countdown: focusEnabled && isFocusCounting ? focusCountdownRemaining : nil,
             progress: focusEnabled && focusCountdownTotal > 0 ? Double(focusCountdownRemaining) / Double(focusCountdownTotal) : 0,
             primaryButton: ("Done".localizedByKey, handleDone),
@@ -36,6 +39,7 @@ struct MovementReminderFullScreenView: View {
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
+            suggestion = MovementSuggestionService.suggestion(preferences: preferences)
             if focusEnabled {
                 startFocusCountdown()
                 setFocusBlocksKeyDismiss?(true)

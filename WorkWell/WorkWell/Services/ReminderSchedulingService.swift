@@ -149,8 +149,12 @@ enum ReminderSchedulingService {
             content.body = "Stretch your back, roll your neck, or walk 1–2 minutes."
             content.categoryIdentifier = movementCategoryIdentifier
         }
-        content.sound = preferences.notificationSound ? .default : nil
+        content.sound = shouldPlaySound(for: type, preferences: preferences) ? .default : nil
         return content
+    }
+
+    static func shouldPlaySound(for type: ReminderType, preferences: UserPreferences) -> Bool {
+        preferences.notificationSound && !(type == .eyeRest && preferences.eyeRestSilentMode)
     }
 
     // MARK: - Snooze

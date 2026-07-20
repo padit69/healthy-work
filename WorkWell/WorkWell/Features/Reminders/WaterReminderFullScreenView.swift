@@ -27,6 +27,7 @@ struct WaterReminderFullScreenView: View {
             displayStyle: displayStyle,
             type: .water,
             primaryColor: primaryColor,
+            backgroundStyle: preferences.reminderBackgroundStyle(for: .water),
             countdown: focusEnabled && isFocusCounting ? focusCountdownRemaining : nil,
             progress: focusEnabled && focusCountdownTotal > 0 ? Double(focusCountdownRemaining) / Double(focusCountdownTotal) : 0,
             primaryButton: ("str_button_i_drank".localizedByKey, handleDrank),

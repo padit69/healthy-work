@@ -166,6 +166,14 @@ struct UserPreferences: Codable, Equatable {
                 return "System".localizedByKey
             }
         }
+
+        var colorScheme: ColorScheme? {
+            switch self {
+            case .light: return .light
+            case .dark: return .dark
+            case .system: return nil
+            }
+        }
     }
 
     enum Language: String, Codable, CaseIterable {
@@ -263,6 +271,22 @@ struct UserPreferences: Codable, Equatable {
         case .water: return reminderWaterPrimaryColorHex
         case .eyeRest: return reminderEyeRestPrimaryColorHex
         case .movement: return reminderMovementPrimaryColorHex
+        }
+    }
+}
+
+enum MovementExercise: String, CaseIterable, Identifiable {
+    case stretchBack = "stretch_back"
+    case neckRoll = "neck_roll"
+    case walk
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .stretchBack: return "Stretch your back".localizedByKey
+        case .neckRoll: return "Roll your neck".localizedByKey
+        case .walk: return "Walk for 1–2 minutes".localizedByKey
         }
     }
 }
