@@ -6,6 +6,7 @@
 import SwiftUI
 import SwiftData
 import AppKit
+import os
 
 @main
 struct HealthyWorkApp: App {
@@ -17,14 +18,50 @@ struct HealthyWorkApp: App {
             WaterRecord.self,
             ReminderLog.self,
         ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        guard ICloudSyncService.hasRequiredEntitlements else {
+            ICloudSyncService.isCloudPersistenceEnabled = false
+            let localConfiguration = ModelConfiguration(
+                schema: schema,
+                isStoredInMemoryOnly: false,
+                cloudKitDatabase: .none
+            )
+            do {
+                return try ModelContainer(for: schema, configurations: [localConfiguration])
+            } catch {
+                fatalError("Could not create local ModelContainer: \(error)")
+            }
+        }
+
+        let cloudConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .private(AppConstants.App.iCloudContainerIdentifier)
+        )
 
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            let container = try ModelContainer(for: schema, configurations: [cloudConfiguration])
+            ICloudSyncService.isCloudPersistenceEnabled = true
+            return container
+        } catch let cloudError {
+            Logger.general.error("Unable to enable iCloud persistence: \(cloudError.localizedDescription, privacy: .public)")
+            ICloudSyncService.isCloudPersistenceEnabled = false
+
+            let localConfiguration = ModelConfiguration(
+                schema: schema,
+                isStoredInMemoryOnly: false,
+                cloudKitDatabase: .none
+            )
+            do {
+                return try ModelContainer(for: schema, configurations: [localConfiguration])
+            } catch {
+                fatalError("Could not create local ModelContainer: \(error)")
+            }
         }
     }()
+
+    init() {
+        PreferencesService.startICloudSync()
+    }
 
     var body: some Scene {
         // Set coordinator and container on AppDelegate as soon as Scene runs (first frame),

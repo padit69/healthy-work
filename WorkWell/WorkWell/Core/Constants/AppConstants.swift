@@ -12,6 +12,7 @@ enum AppConstants {
     enum App {
         static let name = "WorkWell"
         static let bundleIdentifier = "com.hihiteam.working.care"
+        static let iCloudContainerIdentifier = "iCloud.com.hihiteam.working.care"
     }
 
     enum Layout {

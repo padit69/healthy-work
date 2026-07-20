@@ -3,6 +3,14 @@ import XCTest
 @testable import WorkWell
 
 final class FeatureBehaviorTests: XCTestCase {
+    func testTestHostSafelyUsesLocalPersistence() {
+        XCTAssertEqual(
+            ICloudSyncService.containerIdentifier,
+            "iCloud.com.hihiteam.working.care"
+        )
+        XCTAssertFalse(ICloudSyncService.hasRequiredEntitlements)
+    }
+
     func testWaterGoalUsesOverrideAndRejectsInvalidWeight() {
         var preferences = UserPreferences.default
         XCTAssertEqual(WaterService.dailyGoalMl(preferences: preferences), 1_920)

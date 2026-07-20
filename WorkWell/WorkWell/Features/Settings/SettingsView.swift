@@ -5,6 +5,7 @@
 
 import SwiftUI
 import SwiftData
+import StoreKit
 
 // MARK: - Section header/footer style (inspired by Health Reminder)
 private struct SettingsSectionHeader: ViewModifier {
@@ -122,6 +123,7 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \WaterRecord.loggedAt, order: .reverse) private var waterRecords: [WaterRecord]
     @Query(sort: \ReminderLog.completedAt, order: .reverse) private var reminderLogs: [ReminderLog]
+    @Environment(\.requestReview) private var requestReview
     @State private var selectedSection: SettingsSection = .general
 
     private var sidebarSections: [SettingsSection] {
@@ -837,6 +839,43 @@ struct SettingsView: View {
                 Text("Theme, language, and startup apply to the whole app.")
                     .settingsSectionFooter()
             }
+            Section {
+                LabeledContent {
+                    HStack(spacing: 8) {
+                        Image(systemName: viewModel.iCloudSyncStatus.systemImage)
+                            .foregroundStyle(iCloudStatusColor)
+                        Text(viewModel.iCloudSyncStatus.localizedName)
+                            .foregroundStyle(.secondary)
+                        Button {
+                            viewModel.refreshICloudStatus()
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Check iCloud status")
+                    }
+                } label: {
+                    Label("iCloud Sync", systemImage: "icloud.fill")
+                        .font(.system(size: 13))
+                }
+            } header: {
+                Text("iCloud")
+                    .settingsSectionHeader()
+            } footer: {
+                Text("Water history, completed breaks, movement activity, and app settings sync automatically across Macs signed in to the same iCloud account.")
+                    .settingsSectionFooter()
+            }
+        }
+        .onAppear {
+            viewModel.refreshICloudStatus()
+        }
+    }
+
+    private var iCloudStatusColor: Color {
+        switch viewModel.iCloudSyncStatus {
+        case .available: return .green
+        case .checking: return .secondary
+        case .noAccount, .restricted, .temporarilyUnavailable, .error: return .orange
         }
     }
 
@@ -965,7 +1004,27 @@ private struct DashboardMetricCard: View {
                     .settingsSectionHeader()
             }
             Section {
-                Text("Your data is stored locally on this device. No sensitive data is collected by default.")
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Enjoying WorkWell?")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("Your rating helps us improve WorkWell for everyone.")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    Button {
+                        requestReview()
+                    } label: {
+                        Label("Rate WorkWell", systemImage: "star.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityHint("Opens the App Store rating prompt")
+                }
+                .padding(.vertical, 2)
+            } header: {
+                Text("Support WorkWell")
+                    .settingsSectionHeader()
+            }
+            Section {
+                Text("Your wellness data stays private on your devices and syncs through your iCloud account when available. WorkWell does not collect it.")
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
             } header: {

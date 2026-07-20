@@ -10,9 +10,9 @@ import SwiftUI
 /// Log of a completed or snoozed reminder (eye rest or movement) for stats and streaks.
 @Model
 final class ReminderLog {
-    var typeRaw: String
-    var completedAt: Date
-    var completed: Bool // true = user completed, false = snoozed/skipped
+    var typeRaw: String = ReminderType.eyeRest.rawValue
+    var completedAt: Date = Date()
+    var completed: Bool = false // true = user completed, false = snoozed/skipped
 
     var type: ReminderType {
         get { ReminderType(rawValue: typeRaw) ?? .eyeRest }

@@ -18,7 +18,6 @@
 - **Smart hydration** — Daily water goal auto-calculated from weight and gender; log by glass (200/250 ml or oz); 7-day chart and today’s total on the dashboard.
 - **Respects your schedule** — Work hours and lunch break; reminders only during work time.
 
-
 ---
 
 ## ✨ Features

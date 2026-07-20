@@ -18,8 +18,11 @@ final class SettingsViewModel {
     var notificationAuthorized: Bool = false
     /// Reflects whether the app is currently configured to start at login (from system state).
     var startAtLogin: Bool = false
+    var iCloudSyncStatus: ICloudSyncStatus = .checking
     private var lastScheduledPreferences: UserPreferences
     @ObservationIgnored private var rescheduleTask: Task<Void, Never>?
+    @ObservationIgnored private var iCloudPreferencesObserver: NSObjectProtocol?
+    @ObservationIgnored private var suppressPreferenceSave = false
 
     var isStartAtLoginAvailable: Bool {
         LoginItemService.isSupported
@@ -30,9 +33,27 @@ final class SettingsViewModel {
         self.preferences = loadedPreferences
         self.lastScheduledPreferences = loadedPreferences
         refreshStartAtLogin()
+        refreshICloudStatus()
+        iCloudPreferencesObserver = NotificationCenter.default.addObserver(
+            forName: .preferencesDidChangeFromICloud,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.applyICloudPreferences()
+        }
+    }
+
+    deinit {
+        if let iCloudPreferencesObserver {
+            NotificationCenter.default.removeObserver(iCloudPreferencesObserver)
+        }
     }
 
     func saveAndReschedule() {
+        if suppressPreferenceSave {
+            suppressPreferenceSave = false
+            return
+        }
         PreferencesService.save(preferences)
         guard scheduleConfigurationChanged(from: lastScheduledPreferences, to: preferences) else { return }
         lastScheduledPreferences = preferences
@@ -45,6 +66,36 @@ final class SettingsViewModel {
             guard !Task.isCancelled else { return }
             ReminderSchedulingService.rescheduleAll(preferences: preferencesToSchedule)
             self?.rescheduleTask = nil
+        }
+    }
+
+    func refreshICloudStatus() {
+        iCloudSyncStatus = .checking
+        ICloudSyncService.refreshAccountStatus { [weak self] status in
+            self?.iCloudSyncStatus = status
+        }
+    }
+
+    private func applyICloudPreferences() {
+        let syncedPreferences = PreferencesService.load()
+        guard syncedPreferences != preferences else { return }
+
+        let scheduleChanged = scheduleConfigurationChanged(
+            from: lastScheduledPreferences,
+            to: syncedPreferences
+        )
+        suppressPreferenceSave = true
+        preferences = syncedPreferences
+        lastScheduledPreferences = syncedPreferences
+
+        if scheduleChanged {
+            NotificationCenter.default.post(name: .reminderScheduleChanged, object: nil)
+            ReminderSchedulingService.rescheduleAll(preferences: syncedPreferences)
+        }
+
+        Task { @MainActor [weak self] in
+            await Task.yield()
+            self?.suppressPreferenceSave = false
         }
     }
 

@@ -8,9 +8,9 @@ import SwiftData
 
 @Model
 final class WaterRecord {
-    var date: Date
-    var amountMl: Int
-    var loggedAt: Date
+    var date: Date = Date()
+    var amountMl: Int = 0
+    var loggedAt: Date = Date()
 
     init(date: Date, amountMl: Int, loggedAt: Date = Date()) {
         self.date = date
